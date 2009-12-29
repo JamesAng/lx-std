@@ -292,14 +292,14 @@ static void omap_read_buf_pref(struct mtd_info *mtd, u_char *buf, int len)
 						struct omap_nand_info, mtd);
 	uint32_t pfpw_status = 0, r_count = 0;
 	int ret = 0;
-	u32 *p = (u32 *)buf;
+	u32 *p = (u16 *)buf;
 
 	/* take care of subpage reads */
-	for (; len % 4 != 0; ) {
+	for (; len % 2 != 0; ) {
 		*buf++ = __raw_readb(info->nand.IO_ADDR_R);
 		len--;
 	}
-	p = (u32 *) buf;
+	p = (u16 *) buf;
 
 	/* configure and start prefetch transfer */
 	ret = gpmc_prefetch_enable(info->gpmc_cs, 0x0, len, 0x0);
@@ -312,10 +312,10 @@ static void omap_read_buf_pref(struct mtd_info *mtd, u_char *buf, int len)
 	} else {
 		do {
 			pfpw_status = gpmc_prefetch_status();
-			r_count = ((pfpw_status >> 24) & 0x7F) >> 2;
-			ioread32_rep(info->nand_pref_fifo_add, p, r_count);
+			r_count = ((pfpw_status >> 24) & 0x7F) >> 1;
+			ioread16_rep(info->nand_pref_fifo_add, p, r_count);
 			p += r_count;
-			len -= r_count << 2;
+			len -= r_count << 1;
 		} while (len);
 
 		/* disable and stop the PFPW engine */
