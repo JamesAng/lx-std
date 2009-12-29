@@ -292,7 +292,7 @@ static void omap_read_buf_pref(struct mtd_info *mtd, u_char *buf, int len)
 						struct omap_nand_info, mtd);
 	uint32_t pfpw_status = 0, r_count = 0;
 	int ret = 0;
-	u32 *p = (u16 *)buf;
+	u16 *p = (u16 *)buf;
 
 	/* take care of subpage reads */
 	for (; len % 2 != 0; ) {
