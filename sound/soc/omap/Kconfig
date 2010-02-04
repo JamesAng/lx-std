@@ -34,6 +34,14 @@ config SND_OMAP_SOC_AMS_DELTA
 	  	ACTION=="add", KERNEL=="controlC0", \
 				RUN+="/usr/sbin/ldattach 19 /dev/ttyS3"
 
+config SND_OMAP_SOC_IGEP0020
+	tristate "SoC Audio support for IGEP0020"
+	depends on TWL4030_CORE && SND_OMAP_SOC && MACH_IGEP0020
+	select SND_OMAP_SOC_MCBSP
+	select SND_SOC_TWL4030
+	help
+	  Say Y if you want to add support for SoC audio on the IGEP0020.
+
 config SND_OMAP_SOC_OSK5912
 	tristate "SoC Audio support for omap osk5912"
 	depends on SND_OMAP_SOC && MACH_OMAP_OSK && I2C
