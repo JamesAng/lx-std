@@ -269,6 +269,37 @@ static struct omap_dss_device overo_dvi_device = {
 	.platform_disable	= overo_panel_disable_dvi,
 };
 
+static int overo_panel_enable_tv(struct omap_dss_device *dssdev)
+{
+#define ENABLE_VDAC_DEDICATED           0x03
+#define ENABLE_VDAC_DEV_GRP             0x20
+
+	twl4030_i2c_write_u8(TWL4030_MODULE_PM_RECEIVER,
+			ENABLE_VDAC_DEDICATED,
+			TWL4030_VDAC_DEDICATED);
+	twl4030_i2c_write_u8(TWL4030_MODULE_PM_RECEIVER,
+			ENABLE_VDAC_DEV_GRP, TWL4030_VDAC_DEV_GRP);
+
+	return 0;
+}
+
+static void overo_panel_disable_tv(struct omap_dss_device *dssdev)
+{
+	twl4030_i2c_write_u8(TWL4030_MODULE_PM_RECEIVER, 0x00,
+			TWL4030_VDAC_DEDICATED);
+	twl4030_i2c_write_u8(TWL4030_MODULE_PM_RECEIVER, 0x00,
+			TWL4030_VDAC_DEV_GRP);
+}
+
+static struct omap_dss_device overo_tv_device = {
+	.name = "tv",
+	.driver_name = "venc",
+	.type = OMAP_DISPLAY_TYPE_VENC,
+	.phy.venc.type = OMAP_DSS_VENC_TYPE_SVIDEO,
+	.platform_enable = overo_panel_enable_tv,
+	.platform_disable = overo_panel_disable_tv,
+};
+
 static int overo_panel_enable_lcd(struct omap_dss_device *dssdev)
 {
 	if (dvi_enabled) {
@@ -317,6 +348,7 @@ static struct omap_dss_device overo_lcd43_device = {
 
 static struct omap_dss_device *overo_dss_devices[] = {
 	&overo_dvi_device,
+	&overo_tv_device,
 #if defined(CONFIG_PANEL_LGPHILIPS_LB035Q02) || \
 	defined(CONFIG_PANEL_LGPHILIPS_LB035Q02_MODULE)
 	&overo_lcd35_device,
