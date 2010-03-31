@@ -88,6 +88,6 @@ struct user{
 struct user_vfp {
 	unsigned long long fpregs[32];
 	unsigned long fpscr;
-};
+} __attribute__((packed));
 
 #endif /* _ARM_USER_H */
