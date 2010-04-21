@@ -85,14 +85,20 @@ static int lb035q02_write_reg(u8 reg, u16 val)
 
 static int lb035q02_panel_enable(struct omap_dss_device *dssdev)
 {
-	int r = 0;
+	int r;
 
-	pr_info("lgphilips_lb035q02: panel_enable: 0x%08x\n", spidev);
+	r = omapdss_dpi_display_enable(dssdev);
+	if (r)
+		goto err0;
+
 	/* wait couple of vsyncs until enabling the LCD */
 	msleep(50);
 
-	if (dssdev->platform_enable)
+	if (dssdev->platform_enable) {
 		r = dssdev->platform_enable(dssdev);
+		if (r)
+			goto err1;
+	}
 
 	/* Panel init sequence from page 28 of the spec */
 	lb035q02_write_reg(0x01, 0x6300);
@@ -120,6 +126,12 @@ static int lb035q02_panel_enable(struct omap_dss_device *dssdev)
 	lb035q02_write_reg(0x3a, 0x0a0d);
 	lb035q02_write_reg(0x3b, 0x0806);
 
+	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+
+	return 0;
+err1:
+	omapdss_dpi_display_disable(dssdev);
+err0:
 	return r;
 }
 
@@ -129,21 +141,26 @@ static void lb035q02_panel_disable(struct omap_dss_device *dssdev)
 		dssdev->platform_disable(dssdev);
 
 	/* wait at least 5 vsyncs after disabling the LCD */
-
 	msleep(100);
+	omapdss_dpi_display_disable(dssdev);
+	dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
 }
 
 static int lb035q02_panel_suspend(struct omap_dss_device *dssdev)
 {
-	pr_info("lgphilips_lb035q02: panel_suspend\n");
 	lb035q02_panel_disable(dssdev);
+	dssdev->state = OMAP_DSS_DISPLAY_SUSPENDED;
 	return 0;
 }
 
 static int lb035q02_panel_resume(struct omap_dss_device *dssdev)
 {
-	pr_info("lgphilips_lb035q02: panel_resume\n");
 	return lb035q02_panel_enable(dssdev);
+}
+
+static int lb035q02_get_recommended_bpp(struct omap_dss_device *dssdev)
+{
+	return 16;
 }
 
 static struct omap_dss_driver lb035q02_driver = {
@@ -154,6 +171,8 @@ static struct omap_dss_driver lb035q02_driver = {
 	.disable	= lb035q02_panel_disable,
 	.suspend	= lb035q02_panel_suspend,
 	.resume		= lb035q02_panel_resume,
+
+	.get_recommended_bpp = lb035q02_get_recommended_bpp,
 
 	.driver         = {
 		.name   = "lgphilips_lb035q02_panel",
