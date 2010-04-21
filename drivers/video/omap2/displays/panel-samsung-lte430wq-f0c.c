@@ -51,14 +51,27 @@ static void samsung_lte_panel_remove(struct omap_dss_device *dssdev)
 
 static int samsung_lte_panel_enable(struct omap_dss_device *dssdev)
 {
-	int r = 0;
+	int r;
+
+	r = omapdss_dpi_display_enable(dssdev);
+	if (r)
+		goto err0;
 
 	/* wait couple of vsyncs until enabling the LCD */
 	msleep(50);
 
-	if (dssdev->platform_enable)
+	if (dssdev->platform_enable) {
 		r = dssdev->platform_enable(dssdev);
+		if (r)
+			goto err1;
+	}
 
+	dssdev->state = OMAP_DSS_DISPLAY_ACTIVE;
+
+	return 0;
+err1:
+	omapdss_dpi_display_disable(dssdev);
+err0:
 	return r;
 }
 
@@ -68,19 +81,26 @@ static void samsung_lte_panel_disable(struct omap_dss_device *dssdev)
 		dssdev->platform_disable(dssdev);
 
 	/* wait at least 5 vsyncs after disabling the LCD */
-
 	msleep(100);
+	omapdss_dpi_display_disable(dssdev);
+	dssdev->state = OMAP_DSS_DISPLAY_DISABLED;
 }
 
 static int samsung_lte_panel_suspend(struct omap_dss_device *dssdev)
 {
 	samsung_lte_panel_disable(dssdev);
+	dssdev->state = OMAP_DSS_DISPLAY_SUSPENDED;
 	return 0;
 }
 
 static int samsung_lte_panel_resume(struct omap_dss_device *dssdev)
 {
 	return samsung_lte_panel_enable(dssdev);
+}
+
+static int samsung_lte_get_recommended_bpp(struct omap_dss_device *dssdev)
+{
+	return 16;
 }
 
 static struct omap_dss_driver samsung_lte_driver = {
@@ -91,6 +111,8 @@ static struct omap_dss_driver samsung_lte_driver = {
 	.disable	= samsung_lte_panel_disable,
 	.suspend	= samsung_lte_panel_suspend,
 	.resume		= samsung_lte_panel_resume,
+
+	.get_recommended_bpp = samsung_lte_get_recommended_bpp,
 
 	.driver         = {
 		.name   = "samsung_lte_panel",
