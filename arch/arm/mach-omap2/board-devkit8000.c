@@ -147,7 +147,7 @@ static struct panel_generic_dpi_data lcd_panel = {
 static struct omap_dss_device devkit8000_lcd_device = {
 	.name                   = "lcd",
 	.type                   = OMAP_DISPLAY_TYPE_DPI,
-	.driver_name            = "generic_dpi_panel",
+	.driver_name            = "samsung_lte_panel",
 	.data			= &lcd_panel,
 	.phy.dpi.data_lines     = 24,
 };
