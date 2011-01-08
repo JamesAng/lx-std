@@ -1040,7 +1040,7 @@ static void musb_shutdown(struct platform_device *pdev)
  */
 #if defined(CONFIG_USB_MUSB_TUSB6010) || defined(CONFIG_USB_MUSB_OMAP2PLUS) \
 	|| defined(CONFIG_USB_MUSB_AM35X)
-static ushort __initdata fifo_mode = 4;
+static ushort __initdata fifo_mode = 5;
 #elif defined(CONFIG_USB_MUSB_UX500)
 static ushort __initdata fifo_mode = 5;
 #else
