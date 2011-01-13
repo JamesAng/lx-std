@@ -633,12 +633,26 @@ static struct i2c_board_info __initdata overo_i2c_boardinfo[] = {
 	},
 };
 
+#if defined(CONFIG_RTC_DRV_DS3232) || \
+	defined(CONFIG_RTC_DRV_DS3232_MODULE)
+
+static struct i2c_board_info __initdata overo_i2c3_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("rtc-ds3232", 0x68),
+		.type   = "ds3232",
+	},
+};
+#else
+static struct i2c_board_info __initdata overo_i2c3_boardinfo[] = {};
+#endif
+
 static int __init overo_i2c_init(void)
 {
 	omap_register_i2c_bus(1, 2600, overo_i2c_boardinfo,
 			ARRAY_SIZE(overo_i2c_boardinfo));
 	/* i2c2 pins are used for gpio */
-	omap_register_i2c_bus(3, 400, NULL, 0);
+	omap_register_i2c_bus(3, 400, overo_i2c3_boardinfo,
+			ARRAY_SIZE(overo_i2c3_boardinfo));
 	return 0;
 }
 
