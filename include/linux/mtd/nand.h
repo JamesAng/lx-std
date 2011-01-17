@@ -479,6 +479,7 @@ struct nand_buffers {
  *			additional error status checks (determine if errors are
  *			correctable).
  * @write_page:		[REPLACEABLE] High-level page write function
+ * @align_subpage:	[OPTIONAL] Aligns subpage read buffer.
  */
 
 struct nand_chip {
@@ -507,6 +508,7 @@ struct nand_chip {
 	int (*write_page)(struct mtd_info *mtd, struct nand_chip *chip,
 			const uint8_t *buf, int page, int cached, int raw);
 
+	void (*align_subpage)(int *offs, int *len);
 	int chip_delay;
 	unsigned int options;
 
@@ -602,6 +604,7 @@ extern int nand_erase_nand(struct mtd_info *mtd, struct erase_info *instr,
 			   int allowbbt);
 extern int nand_do_read(struct mtd_info *mtd, loff_t from, size_t len,
 			size_t *retlen, uint8_t *buf);
+extern void nand_align_subpage32(int *offs, int *len);
 
 /**
  * struct platform_nand_chip - chip level device structure
