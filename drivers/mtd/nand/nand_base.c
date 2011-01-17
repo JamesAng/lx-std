@@ -1151,6 +1151,22 @@ static int nand_read_page_swecc(struct mtd_info *mtd, struct nand_chip *chip,
 }
 
 /**
+ * nand_align_subpage32 - function to align subpage read to 32-bits
+ * @mtd:	mtd info structure
+ * @buf:	pointer to offset that needs to be aligned
+ * @len:	pointer to length that needs to be aligned.
+ */
+
+void nand_align_subpage32(int *offs, int *len)
+{
+	int diff = *offs & 3;
+
+	*offs =  *offs - diff;
+	*len = (*len + diff + 3) & ~3;
+}
+EXPORT_SYMBOL(nand_align_subpage32);
+
+/**
  * nand_read_subpage - [REPLACABLE] software ecc based sub-page read function
  * @mtd:	mtd info structure
  * @chip:	nand chip info structure
@@ -1210,6 +1226,9 @@ static int nand_read_subpage(struct mtd_info *mtd, struct nand_chip *chip, uint3
 			aligned_len++;
 		if (eccpos[(start_step + num_steps) * chip->ecc.bytes] & (busw - 1))
 			aligned_len++;
+
+		if(chip->align_subpage)
+			chip->align_subpage(&aligned_pos, &aligned_len);
 
 		chip->cmdfunc(mtd, NAND_CMD_RNDOUT, mtd->writesize + aligned_pos, -1);
 		chip->read_buf(mtd, &chip->oob_poi[aligned_pos], aligned_len);
