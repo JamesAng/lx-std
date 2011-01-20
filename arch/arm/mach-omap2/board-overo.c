@@ -68,15 +68,15 @@
 #define OVERO_SMSC911X2_CS     4
 #define OVERO_SMSC911X2_GPIO   65
 
+static struct omap2_mcspi_device_config mcspi1_config = {
+	.turbo_mode	= 0,
+	.single_channel	= 1,	/* 0: slave, 1: master */
+};
+
 #if defined(CONFIG_TOUCHSCREEN_ADS7846) || \
 	defined(CONFIG_TOUCHSCREEN_ADS7846_MODULE)
 
 #include <linux/spi/ads7846.h>
-
-static struct omap2_mcspi_device_config ads7846_mcspi_config = {
-	.turbo_mode	= 0,
-	.single_channel	= 1,	/* 0: slave, 1: master */
-};
 
 static int ads7846_get_pendown_state(void)
 {
@@ -642,6 +642,16 @@ static int __init overo_i2c_init(void)
 	return 0;
 }
 
+#if defined(CONFIG_SERIAL_SC16IS7X2) || defined(CONFIG_SERIAL_SC16IS7X2_MODULE)
+#include <linux/serial_sc16is7x2.h>
+
+static struct sc16is7x2_platform_data sc16is7x2_pdata = {
+	.uartclk	= 22118400,
+	.uart_base	= 0,
+	.gpio_base	= OMAP_MAX_GPIO_LINES + TWL4030_GPIO_MAX + 4,
+};
+#endif
+
 static struct spi_board_info overo_spi_board_info[] __initdata = {
 #if defined(CONFIG_TOUCHSCREEN_ADS7846) || \
 	defined(CONFIG_TOUCHSCREEN_ADS7846_MODULE)
@@ -650,9 +660,20 @@ static struct spi_board_info overo_spi_board_info[] __initdata = {
 		.bus_num		= 1,
 		.chip_select		= 0,
 		.max_speed_hz		= 1500000,
-		.controller_data	= &ads7846_mcspi_config,
+		.controller_data	= &mcspi1_config,
 		.irq			= OMAP_GPIO_IRQ(OVERO_GPIO_PENDOWN),
 		.platform_data		= &ads7846_config,
+	},
+#elif defined(CONFIG_SERIAL_SC16IS7X2) || defined(CONFIG_SERIAL_SC16IS7X2_MODULE)
+	{
+		.modalias		= "sc16is7x2",
+		.bus_num		= 1,
+		.chip_select		= 0,
+		.max_speed_hz		= 4000000,
+		.controller_data	= &mcspi1_config,
+		.irq			= OMAP_GPIO_IRQ(OVERO_GPIO_PENDOWN),
+		.platform_data		= &sc16is7x2_pdata,
+		.mode			= SPI_MODE_0,
 	},
 #elif defined(CONFIG_SPI_SPIDEV) || defined(CONFIG_SPI_SPIDEV_MODULE)
 	{
