@@ -68,10 +68,44 @@
 #define OVERO_SMSC911X2_CS     4
 #define OVERO_SMSC911X2_GPIO   65
 
+#define OVERO_FPGA_CS	1
+
 static struct omap2_mcspi_device_config mcspi1_config = {
 	.turbo_mode	= 0,
 	.single_channel	= 1,	/* 0: slave, 1: master */
 };
+
+#if defined(CONFIG_GPIO_WHOIFPGA) || \
+	defined(CONFIG_GPIO_WHOIFPGA_MODULE)
+#include <linux/gpio_whoifpga.h>
+
+static struct whoifpga_platform_data whoifpga_pdata = {
+	.gpio_base	= OMAP_MAX_GPIO_LINES + TWL4030_GPIO_MAX + 4 + 8,
+};
+
+static struct platform_device whoifpga_device = {
+	.name          = "whoifpga_gpio",
+	.dev		= {
+		.platform_data = &whoifpga_pdata,
+	},
+};
+
+static void __init overo_fpga_init(void)
+{
+	unsigned long cs_mem_base;
+
+	if (gpmc_cs_request(OVERO_FPGA_CS, SZ_128K, &cs_mem_base) < 0) {
+		printk(KERN_ERR "Failed request for GPMC mem for FPGA\n");
+	} else {
+		printk(KERN_ERR "FPGA is on NCS%d, base address is 0x%08x\n",
+			OVERO_FPGA_CS, cs_mem_base);
+		whoifpga_pdata.fpga_base_address = cs_mem_base;
+		platform_device_register(&whoifpga_device);
+	}
+}
+#else
+static inline void __init overo_fpga_init(void) { return; }
+#endif
 
 #if defined(CONFIG_TOUCHSCREEN_ADS7846) || \
 	defined(CONFIG_TOUCHSCREEN_ADS7846_MODULE)
@@ -781,6 +815,7 @@ static void __init overo_init(void)
 	overo_spi_init();
 	overo_init_smsc911x();
 	overo_display_init();
+	overo_fpga_init();
 	overo_init_led();
 	overo_init_keys();
 
