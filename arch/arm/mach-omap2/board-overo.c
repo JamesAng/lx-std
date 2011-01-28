@@ -90,6 +90,14 @@ static struct platform_device whoifpga_device = {
 	},
 };
 
+static void system_poweroff(void)
+{
+	void __iomem *reg = ioremap(whoifpga_pdata.fpga_base_address, 1024);
+
+	reg += 0x20;
+	__raw_writew(0x5154, reg);
+}
+
 static void __init overo_fpga_init(void)
 {
 	unsigned long cs_mem_base;
@@ -102,6 +110,8 @@ static void __init overo_fpga_init(void)
 		whoifpga_pdata.fpga_base_address = cs_mem_base;
 		platform_device_register(&whoifpga_device);
 	}
+
+	pm_power_off = system_poweroff;
 }
 #else
 static inline void __init overo_fpga_init(void) { return; }
