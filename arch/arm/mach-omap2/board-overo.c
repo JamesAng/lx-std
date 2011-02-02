@@ -500,6 +500,14 @@ static struct omap2_hsmmc_info mmc[] = {
 		.transceiver	= true,
 		.ocr_mask	= 0x00100000,	/* 3.3V */
 	},
+	{
+		.mmc		= 3,
+		.wires		= 4,
+		.gpio_cd	= -EINVAL,
+		.gpio_wp	= -EINVAL,
+		.ocr_mask       = 0x00100000,   /* 3.3V */
+
+	},
 	{}	/* Terminator */
 };
 
