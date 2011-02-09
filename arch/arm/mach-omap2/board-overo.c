@@ -36,6 +36,7 @@
 #include <linux/mtd/nand.h>
 #include <linux/mtd/partitions.h>
 #include <linux/mmc/host.h>
+#include <linux/wl12xx.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -61,7 +62,8 @@
 #include "hsmmc.h"
 
 #define OVERO_GPIO_BT_XGATE	15
-#define OVERO_GPIO_W2W_NRESET	16
+#define OVERO_GPIO_WIFI_NRESET	16
+#define OVERO_GPIO_WIFI_IRQ	58
 #define OVERO_GPIO_PENDOWN	114
 #define OVERO_GPIO_BT_NRESET	164
 #define OVERO_GPIO_USBH_CPEN	168
@@ -454,6 +456,12 @@ static void __init overo_flash_init(void)
 	}
 }
 
+struct wl12xx_platform_data wlan_data __initdata = {
+	.irq = OMAP_GPIO_IRQ(OVERO_GPIO_WIFI_IRQ),
+	/* ref clock is 26 MHz */
+	.board_ref_clock = 1,
+};
+
 static struct omap2_hsmmc_info mmc[] = {
 	{
 		.mmc		= 1,
@@ -462,12 +470,13 @@ static struct omap2_hsmmc_info mmc[] = {
 		.gpio_wp	= -EINVAL,
 	},
 	{
+		.name           = "wl1271",
 		.mmc		= 2,
-		.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_NONREMOVABLE,
+		.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_POWER_OFF_CARD,
 		.gpio_cd	= -EINVAL,
 		.gpio_wp	= -EINVAL,
-		.transceiver	= true,
-		.ocr_mask	= 0x00100000,	/* 3.3V */
+		.ocr_mask       = MMC_VDD_165_195,
+		.nonremovable	= true,
 	},
 	{}	/* Terminator */
 };
@@ -602,6 +611,34 @@ static struct regulator_init_data overo_vmmc1 = {
 	},
 	.num_consumer_supplies	= 1,
 	.consumer_supplies	= &overo_vmmc1_supply,
+};
+
+/* VCC for wifi module */
+static struct regulator_consumer_supply wl1271_supply =
+	REGULATOR_SUPPLY("vmmc", "omap_hsmmc.1");
+
+static struct regulator_init_data vwl1271_regulator = {
+	.constraints = {
+		.valid_ops_mask		= REGULATOR_CHANGE_STATUS,
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &wl1271_supply,
+};
+
+static struct fixed_voltage_config vwl1271 = {
+	.supply_name		= "vwl1271",
+	.microvolts		= 1800000, /* 1.8V */
+	.gpio			= -EINVAL,
+	.startup_delay		= 0,
+	.init_data		= &vwl1271_regulator,
+};
+
+static struct platform_device vwl1271_device = {
+	.name		= "reg-fixed-voltage",
+	.id		= 2,
+	.dev = {
+		.platform_data = &vwl1271,
+	},
 };
 
 /* VDAC for DSS driving S-Video (8 mA unloaded, max 65 mA) */
@@ -810,6 +847,9 @@ static void __init overo_opp_init(void)
 static void __init overo_init(void)
 {
 	omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
+	platform_device_register(&vwl1271_device);
+	if (wl12xx_set_platform_data(&wlan_data))
+		pr_err("error setting wl12xx data\n");
 	overo_i2c_init();
 	omap_display_init(&overo_dss_data);
 	omap_serial_init();
@@ -827,16 +867,17 @@ static void __init overo_init(void)
 	omap_mux_init_signal("sdrc_cke0", OMAP_PIN_OUTPUT);
 	omap_mux_init_signal("sdrc_cke1", OMAP_PIN_OUTPUT);
 
-	if ((gpio_request(OVERO_GPIO_W2W_NRESET,
-			  "OVERO_GPIO_W2W_NRESET") == 0) &&
-	    (gpio_direction_output(OVERO_GPIO_W2W_NRESET, 1) == 0)) {
-		gpio_export(OVERO_GPIO_W2W_NRESET, 0);
-		gpio_set_value(OVERO_GPIO_W2W_NRESET, 0);
-		udelay(10);
-		gpio_set_value(OVERO_GPIO_W2W_NRESET, 1);
+	if ((gpio_request(OVERO_GPIO_WIFI_NRESET,
+			  "OVERO_GPIO_WIFI_NRESET") == 0) &&
+	    (gpio_direction_output(OVERO_GPIO_WIFI_NRESET, 1) == 0)) {
+		mdelay(11);
+		gpio_export(OVERO_GPIO_WIFI_NRESET, 0);
+		gpio_set_value(OVERO_GPIO_WIFI_NRESET, 0);
+		udelay(70);
+		gpio_set_value(OVERO_GPIO_WIFI_NRESET, 1);
 	} else {
 		printk(KERN_ERR "could not obtain gpio for "
-					"OVERO_GPIO_W2W_NRESET\n");
+					"OVERO_GPIO_WIFI_NRESET\n");
 	}
 
 	if ((gpio_request(OVERO_GPIO_BT_XGATE, "OVERO_GPIO_BT_XGATE") == 0) &&
@@ -847,6 +888,7 @@ static void __init overo_init(void)
 
 	if ((gpio_request(OVERO_GPIO_BT_NRESET, "OVERO_GPIO_BT_NRESET") == 0) &&
 	    (gpio_direction_output(OVERO_GPIO_BT_NRESET, 1) == 0)) {
+		mdelay(11);
 		gpio_export(OVERO_GPIO_BT_NRESET, 0);
 		gpio_set_value(OVERO_GPIO_BT_NRESET, 0);
 		mdelay(6);
