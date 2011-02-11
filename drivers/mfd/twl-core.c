@@ -77,7 +77,7 @@
 #define twl_has_regulator()	false
 #endif
 
-#if defined(CONFIG_TWL4030_MADC) || defined(CONFIG_TWL4030_MADC_MODULE)
+#if defined(CONFIG_SENSORS_TWL4030_MADC) || defined(CONFIG_SENSORS_TWL4030_MADC_MODULE)
 #define twl_has_madc()	true
 #else
 #define twl_has_madc()	false
