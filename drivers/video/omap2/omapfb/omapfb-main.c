@@ -722,10 +722,10 @@ int check_fb_var(struct fb_info *fbi, struct fb_var_screeninfo *var)
 		var->pixclock = timings.pixel_clock != 0 ?
 			KHZ2PICOS(timings.pixel_clock) :
 			0;
-		var->left_margin = timings.hbp;
-		var->right_margin = timings.hfp;
-		var->upper_margin = timings.vbp;
-		var->lower_margin = timings.vfp;
+		var->left_margin = timings.hfp;
+		var->right_margin = timings.hbp;
+		var->upper_margin = timings.vfp;
+		var->lower_margin = timings.vbp;
 		var->hsync_len = timings.hsw;
 		var->vsync_len = timings.vsw;
 	} else {
@@ -2048,10 +2048,10 @@ static int omapfb_mode_to_timings(const char *mode_str,
 	}
 
 	timings->pixel_clock = PICOS2KHZ(var->pixclock);
-	timings->hbp = var->left_margin;
-	timings->hfp = var->right_margin;
-	timings->vbp = var->upper_margin;
-	timings->vfp = var->lower_margin;
+	timings->hfp = var->left_margin;
+	timings->hbp = var->right_margin;
+	timings->vfp = var->upper_margin;
+	timings->vbp = var->lower_margin;
 	timings->hsw = var->hsync_len;
 	timings->vsw = var->vsync_len;
 	timings->x_res = var->xres;
