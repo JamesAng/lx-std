@@ -478,10 +478,10 @@ static struct omap2_hsmmc_info mmc[] = {
 		.name           = "wl1271",
 		.mmc		= 2,
 		.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_POWER_OFF_CARD,
-		.gpio_wp	= -EINVAL,
 		.gpio_cd	= -EINVAL,
+		.gpio_wp	= -EINVAL,
+		.ocr_mask       = MMC_VDD_165_195,
 		.nonremovable	= true,
-		.ocr_mask	= MMC_VDD_165_195,
 	},
 	{}	/* Terminator */
 };
@@ -616,6 +616,34 @@ static struct regulator_init_data overo_vmmc1 = {
 	.consumer_supplies	= &overo_vmmc1_supply,
 };
 
+/* VCC for wifi module */
+static struct regulator_consumer_supply wl1271_supply =
+	REGULATOR_SUPPLY("vmmc", "mmci-omap-hs.1");
+
+static struct regulator_init_data vwl1271_regulator = {
+	.constraints = {
+		.valid_ops_mask		= REGULATOR_CHANGE_STATUS,
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &wl1271_supply,
+};
+
+static struct fixed_voltage_config vwl1271 = {
+	.supply_name		= "vwl1271",
+	.microvolts		= 1800000, /* 1.8V */
+	.gpio			= -EINVAL,
+	.startup_delay		= 0,
+	.init_data		= &vwl1271_regulator,
+};
+
+static struct platform_device vwl1271_device = {
+	.name		= "reg-fixed-voltage",
+	.id		= 2,
+	.dev = {
+		.platform_data = &vwl1271,
+	},
+};
+
 /* VDAC for DSS driving S-Video (8 mA unloaded, max 65 mA) */
 static struct regulator_init_data overo_vdac = {
 	.constraints = {
@@ -644,8 +672,6 @@ static struct regulator_init_data overo_vpll2 = {
 	.num_consumer_supplies	= 1,
 	.consumer_supplies	= &overo_vdds_dsi_supply,
 };
-
-/* mmc2 (WLAN) and Bluetooth don't use twl4030 regulators */
 
 static struct twl4030_codec_audio_data overo_audio_data = {
 	.audio_mclk = 26000000,
@@ -783,6 +809,7 @@ static struct omap_musb_board_data musb_board_data = {
 static void __init overo_init(void)
 {
 	omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
+	platform_device_register(&vwl1271_device);
 	if (wl12xx_set_platform_data(&wlan_data))
 		pr_err("error setting wl12xx data\n");
 	overo_i2c_init();
