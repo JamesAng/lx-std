@@ -617,6 +617,7 @@ static long __video_do_ioctl(struct file *file,
 	const struct v4l2_ioctl_ops *ops = vfd->ioctl_ops;
 	void *fh = file->private_data;
 	struct v4l2_fh *vfh = NULL;
+	int use_fh_prio = 0;
 	long ret = -EINVAL;
 
 	if (ops == NULL) {
@@ -631,10 +632,12 @@ static long __video_do_ioctl(struct file *file,
 		printk(KERN_CONT "\n");
 	}
 
-	if (test_bit(V4L2_FL_USES_V4L2_FH, &vfd->flags))
+	if (test_bit(V4L2_FL_USES_V4L2_FH, &vfd->flags)) {
 		vfh = file->private_data;
+		use_fh_prio = test_bit(V4L2_FL_USE_FH_PRIO, &vfd->flags);
+	}
 
-	if (vfh && !ops->vidioc_s_priority) {
+	if (use_fh_prio) {
 		switch (cmd) {
 		case VIDIOC_S_CTRL:
 		case VIDIOC_S_STD:
@@ -696,7 +699,7 @@ static long __video_do_ioctl(struct file *file,
 
 		if (ops->vidioc_g_priority) {
 			ret = ops->vidioc_g_priority(file, fh, p);
-		} else if (vfh) {
+		} else if (use_fh_prio) {
 			*p = v4l2_prio_max(&vfd->v4l2_dev->prio);
 			ret = 0;
 		}
@@ -708,7 +711,7 @@ static long __video_do_ioctl(struct file *file,
 	{
 		enum v4l2_priority *p = arg;
 
-		if (!ops->vidioc_s_priority && vfh == NULL)
+		if (!ops->vidioc_s_priority && !use_fh_prio)
 				break;
 		dbgarg(cmd, "setting priority to %d\n", *p);
 		if (ops->vidioc_s_priority)
@@ -2041,7 +2044,7 @@ static long __video_do_ioctl(struct file *file,
 
 		if (!ops->vidioc_default)
 			break;
-		if (vfh && !ops->vidioc_s_priority)
+		if (use_fh_prio)
 			valid_prio = v4l2_prio_check(vfd->prio, vfh->prio) >= 0;
 		ret = ops->vidioc_default(file, fh, valid_prio, cmd, arg);
 		break;
