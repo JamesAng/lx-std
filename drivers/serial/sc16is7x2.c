@@ -426,9 +426,19 @@ static void sc16is7x2_set_mctrl(struct uart_port *port, unsigned int mctrl)
 
 	dev_dbg(&ts->spi->dev, "%s (0x%02x)\n", __func__, mctrl);
 
-	/* TODO: set DCD and DSR
-	 * CTS/RTS is handled automatically
+	/* Only handle the DTR, RTS, and Loopback bits.
+	 * If you want OUT1 or OUT2, use GPIO
 	 */
+	if (mctrl & TIOCM_DTR)
+		 chan->mcr |= UART_MCR_DTR;
+	if (mctrl & TIOCM_RTS)
+		 chan->mcr |= UART_MCR_RTS;
+	if (mctrl & TIOCM_LOOP)
+		 chan->mcr |= UART_MCR_LOOP;
+
+	chan->handle_regs = true;
+	/* Trigger work thread for doing the actual configuration change */
+	sc16is7x2_dowork(chan);
 }
 
 static void sc16is7x2_stop_tx(struct uart_port *port)
