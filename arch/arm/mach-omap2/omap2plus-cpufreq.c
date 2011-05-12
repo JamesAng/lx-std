@@ -26,6 +26,7 @@
 #include <linux/clk.h>
 #include <linux/io.h>
 #include <linux/opp.h>
+#include <linux/slab.h>
 #include <linux/cpu.h>
 
 #include <asm/system.h>
@@ -216,6 +217,8 @@ static int __cpuinit omap_cpu_init(struct cpufreq_policy *policy)
 static int omap_cpu_exit(struct cpufreq_policy *policy)
 {
 	clk_exit_cpufreq_table(&freq_table);
+	kfree(freq_table);
+	freq_table = NULL;
 	clk_put(mpu_clk);
 	return 0;
 }
