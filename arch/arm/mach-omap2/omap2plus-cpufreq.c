@@ -84,8 +84,10 @@ static int omap_target(struct cpufreq_policy *policy,
 	if (is_smp() && (num_online_cpus() < NR_CPUS))
 		return ret;
 
-	/* Ensure desired rate is within allowed range.  Some govenors
-	 * (ondemand) will just pass target_freq=0 to get the minimum. */
+	/*
+	 * Ensure desired rate is within allowed range.  Some govenors
+	 * (ondemand) will just pass target_freq=0 to get the minimum.
+	 */
 	if (target_freq < policy->min)
 		target_freq = policy->min;
 	if (target_freq > policy->max)
