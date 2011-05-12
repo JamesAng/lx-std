@@ -182,10 +182,18 @@ static int __cpuinit omap_cpu_init(struct cpufreq_policy *policy)
 
 	if (freq_table) {
 		result = cpufreq_frequency_table_cpuinfo(policy, freq_table);
-		if (!result)
+		if (!result) {
 			cpufreq_frequency_table_get_attr(freq_table,
 							policy->cpu);
-	} else {
+		} else {
+			WARN(true, "%s: fallback to clk_round(freq_table=%d)\n",
+					__func__, result);
+			kfree(freq_table);
+			freq_table = NULL;
+		}
+	}
+
+	if (!freq_table) {
 		policy->cpuinfo.min_freq = clk_round_rate(mpu_clk, 0) / 1000;
 		policy->cpuinfo.max_freq = clk_round_rate(mpu_clk,
 							VERY_HI_RATE) / 1000;
