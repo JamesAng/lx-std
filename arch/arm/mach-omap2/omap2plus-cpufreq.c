@@ -77,24 +77,42 @@ static int omap_target(struct cpufreq_policy *policy,
 		       unsigned int target_freq,
 		       unsigned int relation)
 {
-	int i, ret = 0;
+	unsigned int i;
+	int ret = 0;
 	struct cpufreq_freqs freqs;
 
 	/* Changes not allowed until all CPUs are online */
 	if (is_smp() && (num_online_cpus() < NR_CPUS))
 		return ret;
 
-	/*
-	 * Ensure desired rate is within allowed range.  Some govenors
-	 * (ondemand) will just pass target_freq=0 to get the minimum.
-	 */
-	if (target_freq < policy->min)
-		target_freq = policy->min;
-	if (target_freq > policy->max)
-		target_freq = policy->max;
+	if (freq_table) {
+		ret = cpufreq_frequency_table_target(policy, freq_table,
+				target_freq, relation, &i);
+		if (ret) {
+			pr_debug("%s: cpu%d: no freq match for %d(ret=%d)\n",
+				__func__, policy->cpu, target_freq, ret);
+			return ret;
+		}
+		freqs.new = freq_table[i].frequency;
+	} else {
+		/*
+		 * Ensure desired rate is within allowed range. Some govenors
+		 * (ondemand) will just pass target_freq=0 to get the minimum.
+		 */
+		if (target_freq < policy->min)
+			target_freq = policy->min;
+		if (target_freq > policy->max)
+			target_freq = policy->max;
+
+		freqs.new = clk_round_rate(mpu_clk, target_freq * 1000) / 1000;
+	}
+	if (!freqs.new) {
+		pr_err("%s: cpu%d: no match for freq %d\n", __func__,
+			policy->cpu, target_freq);
+		return -EINVAL;
+	}
 
 	freqs.old = omap_getspeed(policy->cpu);
-	freqs.new = clk_round_rate(mpu_clk, target_freq * 1000) / 1000;
 	freqs.cpu = policy->cpu;
 
 	if (freqs.old == freqs.new)
