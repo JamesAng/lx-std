@@ -180,7 +180,13 @@ static int __cpuinit omap_cpu_init(struct cpufreq_policy *policy)
 		pr_warning("%s: unable to get the mpu device\n", __func__);
 		return -EINVAL;
 	}
-	opp_init_cpufreq_table(mpu_dev, &freq_table);
+
+	/*
+	 * if we dont get cpufreq table using opp, use traditional omap2 lookup
+	 * as a fallback
+	 */
+	if (opp_init_cpufreq_table(mpu_dev, &freq_table))
+		clk_init_cpufreq_table(&freq_table);
 
 	if (freq_table) {
 		result = cpufreq_frequency_table_cpuinfo(policy, freq_table);
@@ -188,6 +194,7 @@ static int __cpuinit omap_cpu_init(struct cpufreq_policy *policy)
 			cpufreq_frequency_table_get_attr(freq_table,
 							policy->cpu);
 		} else {
+			clk_exit_cpufreq_table(&freq_table);
 			WARN(true, "%s: fallback to clk_round(freq_table=%d)\n",
 					__func__, result);
 			kfree(freq_table);
