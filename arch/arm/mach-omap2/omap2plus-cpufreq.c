@@ -42,6 +42,9 @@
 #define VERY_HI_RATE	900000000
 
 static struct cpufreq_frequency_table *freq_table;
+static int freq_table_users;
+static DEFINE_MUTEX(freq_table_lock);
+
 static struct clk *mpu_clk;
 
 static int omap_verify_speed(struct cpufreq_policy *policy)
@@ -172,6 +175,18 @@ skip_lpj:
 	return ret;
 }
 
+static void freq_table_free(void)
+{
+	if (!freq_table_users)
+		return;
+	freq_table_users--;
+	if (freq_table_users)
+		return;
+	clk_exit_cpufreq_table(&freq_table);
+	kfree(freq_table);
+	freq_table = NULL;
+}
+
 static int __cpuinit omap_cpu_init(struct cpufreq_policy *policy)
 {
 	int result = 0;
@@ -199,14 +214,18 @@ static int __cpuinit omap_cpu_init(struct cpufreq_policy *policy)
 		return -EINVAL;
 	}
 
+	mutex_lock(&freq_table_lock);
 	/*
 	 * if we dont get cpufreq table using opp, use traditional omap2 lookup
 	 * as a fallback
 	 */
-	if (opp_init_cpufreq_table(mpu_dev, &freq_table))
-		clk_init_cpufreq_table(&freq_table);
+	if (!freq_table) {
+		if (opp_init_cpufreq_table(mpu_dev, &freq_table))
+			clk_init_cpufreq_table(&freq_table);
+	}
 
 	if (freq_table) {
+		freq_table_users++;
 		result = cpufreq_frequency_table_cpuinfo(policy, freq_table);
 		if (!result) {
 			cpufreq_frequency_table_get_attr(freq_table,
@@ -215,10 +234,10 @@ static int __cpuinit omap_cpu_init(struct cpufreq_policy *policy)
 			clk_exit_cpufreq_table(&freq_table);
 			WARN(true, "%s: fallback to clk_round(freq_table=%d)\n",
 					__func__, result);
-			kfree(freq_table);
-			freq_table = NULL;
+			freq_table_free();
 		}
 	}
+	mutex_unlock(&freq_table_lock);
 
 	if (!freq_table) {
 		policy->cpuinfo.min_freq = clk_round_rate(mpu_clk, 0) / 1000;
@@ -251,9 +270,9 @@ static int __cpuinit omap_cpu_init(struct cpufreq_policy *policy)
 
 static int omap_cpu_exit(struct cpufreq_policy *policy)
 {
-	clk_exit_cpufreq_table(&freq_table);
-	kfree(freq_table);
-	freq_table = NULL;
+	mutex_lock(&freq_table_lock);
+	freq_table_free();
+	mutex_unlock(&freq_table_lock);
 	clk_put(mpu_clk);
 	return 0;
 }
