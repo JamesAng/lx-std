@@ -62,7 +62,9 @@
  *	AXBX	= GPIO173, GPIO172, GPIO171: 1 1 1
  *	C1_3	= GPIO173, GPIO172, GPIO171: 1 1 0
  *	C4	= GPIO173, GPIO172, GPIO171: 1 0 1
- *	XM	= GPIO173, GPIO172, GPIO171: 0 0 0
+ *	XMA	= GPIO173, GPIO172, GPIO171: 0 0 0
+ *	XMB	= GPIO173, GPIO172, GPIO171: 0 0 1
+ *  XMC = GPIO173, GPIO172, GPIO171: 0 1 0
  */
 enum {
 	OMAP3BEAGLE_BOARD_UNKN = 0,
@@ -70,6 +72,7 @@ enum {
 	OMAP3BEAGLE_BOARD_C1_3,
 	OMAP3BEAGLE_BOARD_C4,
 	OMAP3BEAGLE_BOARD_XM,
+	OMAP3BEAGLE_BOARD_XMC,
 };
 
 static u8 omap3_beagle_version;
@@ -124,9 +127,18 @@ static void __init omap3_beagle_init_rev(void)
 		printk(KERN_INFO "OMAP3 Beagle Rev: xM\n");
 		omap3_beagle_version = OMAP3BEAGLE_BOARD_XM;
 		break;
+	case 1:
+		printk(KERN_INFO "OMAP3 Beagle Rev: xM B\n");
+		omap3_beagle_version = OMAP3BEAGLE_BOARD_XM;
+		break;
+	case 2:
+		printk(KERN_INFO "OMAP3 Beagle Rev: xM C\n");
+		omap3_beagle_version = OMAP3BEAGLE_BOARD_XMC;
+		break;
 	default:
-		printk(KERN_INFO "OMAP3 Beagle Rev: unknown %hd\n", beagle_rev);
-		omap3_beagle_version = OMAP3BEAGLE_BOARD_UNKN;
+		printk(KERN_INFO 
+		"OMAP3 Beagle Rev: unknown %hd, assuming xM C or newer\n", beagle_rev);
+		omap3_beagle_version = OMAP3BEAGLE_BOARD_XMC;
 	}
 
 	return;
@@ -278,7 +290,7 @@ static int beagle_twl_gpio_setup(struct device *dev,
 {
 	int r;
 
-	if (omap3_beagle_get_rev() == OMAP3BEAGLE_BOARD_XM) {
+	if (cpu_is_omap3630()) {
 		mmc[0].gpio_wp = -EINVAL;
 	} else if ((omap3_beagle_get_rev() == OMAP3BEAGLE_BOARD_C1_3) ||
 		(omap3_beagle_get_rev() == OMAP3BEAGLE_BOARD_C4)) {
@@ -298,7 +310,8 @@ static int beagle_twl_gpio_setup(struct device *dev,
 	/* REVISIT: need ehci-omap hooks for external VBUS
 	 * power switch and overcurrent detect
 	 */
-	if (omap3_beagle_get_rev() != OMAP3BEAGLE_BOARD_XM) {
+	if (omap3_beagle_get_rev() != OMAP3BEAGLE_BOARD_XM 
+		&& omap3_beagle_get_rev() != OMAP3BEAGLE_BOARD_XMC) {
 		r = gpio_request(gpio + 1, "EHCI_nOC");
 		if (!r) {
 			r = gpio_direction_input(gpio + 1);
@@ -320,7 +333,7 @@ static int beagle_twl_gpio_setup(struct device *dev,
 		gpio_direction_output(gpio + TWL4030_GPIO_MAX, 0);
 
 	/* DVI reset GPIO is different between beagle revisions */
-	if (omap3_beagle_get_rev() == OMAP3BEAGLE_BOARD_XM)
+	if (cpu_is_omap3630()) 
 		beagle_dvi_device.reset_gpio = 129;
 	else
 		beagle_dvi_device.reset_gpio = 170;
@@ -334,7 +347,7 @@ static int beagle_twl_gpio_setup(struct device *dev,
 	 * P7/P8 revisions(prototype): Camera EN
 	 * A2+ revisions (production): LDO (supplies DVI, serial, led blocks)
 	 */
-	if (omap3_beagle_get_rev() == OMAP3BEAGLE_BOARD_XM) {
+	if (cpu_is_omap3630()) {
 		r = gpio_request(gpio + 1, "nDVI_PWR_EN");
 		if (!r) {
 			r = gpio_direction_output(gpio + 1, 0);
@@ -625,7 +638,7 @@ static void __init beagle_opp_init(void)
 	}
 
 	/* Custom OPP enabled for XM */
-	if (omap3_beagle_get_rev() == OMAP3BEAGLE_BOARD_XM) {
+	if (cpu_is_omap3630()) {
 		struct omap_hwmod *mh = omap_hwmod_lookup("mpu");
 		struct omap_hwmod *dh = omap_hwmod_lookup("iva");
 		struct device *dev;
@@ -665,6 +678,11 @@ static void __init omap3_beagle_init(void)
 	omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
 	omap3_beagle_init_rev();
 	omap3_beagle_i2c_init();
+
+	if (cpu_is_omap3630()) {
+		gpio_buttons[0].gpio = 4;
+	}
+
 	platform_add_devices(omap3_beagle_devices,
 			ARRAY_SIZE(omap3_beagle_devices));
 	omap_display_init(&beagle_dss_data);
