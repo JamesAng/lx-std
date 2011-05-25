@@ -1091,10 +1091,12 @@ static void __init omap3_beagle_init(void)
 	beagle_display_init();
 	beagle_opp_init();
 
-	/* Enable camera */
-	gpio_request(MT9P031_RESET_GPIO, "cam_rst");
-	gpio_direction_output(MT9P031_RESET_GPIO, 0);
-	omap3_init_camera(&beagle_isp_platform_data);
+	if (cpu_is_omap3630()) {
+		/* Enable camera */
+		gpio_request(MT9P031_RESET_GPIO, "cam_rst");
+		gpio_direction_output(MT9P031_RESET_GPIO, 0);
+		omap3_init_camera(&beagle_isp_platform_data);
+	}
 }
 
 early_param("buddy", expansionboard_setup);
