@@ -751,9 +751,12 @@ extern u32 omap4_prm_read_inst_reg(s16 inst, u16 idx);
 extern void omap4_prm_write_inst_reg(u32 val, s16 inst, u16 idx);
 extern u32 omap4_prm_rmw_inst_reg_bits(u32 mask, u32 bits, s16 inst, s16 idx);
 
+#define OMAP4_PRM_IRQ_VDD_CORE_ID	0
+#define OMAP4_PRM_IRQ_VDD_IVA_ID	1
+#define OMAP4_PRM_IRQ_VDD_MPU_ID	2
 /* OMAP4-specific VP functions */
-u32 omap4_prm_vp_check_txdone(u8 vp_id);
-void omap4_prm_vp_clear_txdone(u8 vp_id);
+u32 omap4_prm_vp_check_txdone(u8 irq_id);
+void omap4_prm_vp_clear_txdone(u8 irq_id);
 
 /*
  * OMAP4 access functions for voltage controller (VC) and
