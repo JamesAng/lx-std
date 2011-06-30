@@ -633,6 +633,24 @@ static struct regulator_init_data overo_vpll2 = {
 	.consumer_supplies	= overo_vdds_dsi_supply,
 };
 
+static struct regulator_consumer_supply overo_usb_phy_supply =
+	REGULATOR_SUPPLY("hsusb0", "ehci-omap.0");
+
+/* VAUX2 for USB host PHY */
+static struct regulator_init_data overo_vaux2 = {
+	.constraints = {
+		.min_uV			= 1800000,
+		.max_uV			= 1800000,
+		.apply_uV		= true,
+		.valid_modes_mask	= REGULATOR_MODE_NORMAL
+					| REGULATOR_MODE_STANDBY,
+		.valid_ops_mask		= REGULATOR_CHANGE_MODE
+					| REGULATOR_CHANGE_STATUS,
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &overo_usb_phy_supply,
+};
+
 static struct twl4030_codec_audio_data overo_audio_data;
 
 static struct twl4030_codec_data overo_codec_data = {
@@ -654,6 +672,7 @@ static struct twl4030_platform_data overo_twldata = {
 	.vmmc1		= &overo_vmmc1,
 	.vdac		= &overo_vdac,
 	.vpll2		= &overo_vpll2,
+	.vaux2		= &overo_vaux2,
 };
 
 static struct i2c_board_info __initdata overo_i2c_boardinfo[] = {
