@@ -21,6 +21,7 @@
 #include <linux/io.h>
 #include <linux/leds.h>
 #include <linux/gpio.h>
+#include <linux/irq.h>
 #include <linux/input.h>
 #include <linux/gpio_keys.h>
 
@@ -240,6 +241,10 @@ static struct twl4030_codec_data touchbook_codec_data = {
 	.audio = &touchbook_audio_data,
 };
 
+static struct twl4030_madc_platform_data touchbook_madc_data = {
+	.irq_line	= 1,
+};
+
 static struct twl4030_platform_data touchbook_twldata = {
 	.irq_base	= TWL4030_IRQ_BASE,
 	.irq_end	= TWL4030_IRQ_END,
@@ -248,6 +253,7 @@ static struct twl4030_platform_data touchbook_twldata = {
 	.usb		= &touchbook_usb_data,
 	.gpio		= &touchbook_gpio_data,
 	.codec		= &touchbook_codec_data,
+	.madc		= &touchbook_madc_data,
 	.vmmc1		= &touchbook_vmmc1,
 	.vsim		= &touchbook_vsim,
 	.vdac		= &touchbook_vdac,
