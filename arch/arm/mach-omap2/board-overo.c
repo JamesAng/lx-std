@@ -306,7 +306,7 @@ static struct omap2_hsmmc_info mmc[] = {
 	},
 	{
 		.mmc		= 2,
-		.caps		= MMC_CAP_4_BIT_DATA,
+		.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_NONREMOVABLE,
 		.gpio_cd	= -EINVAL,
 		.gpio_wp	= -EINVAL,
 		.transceiver	= true,
