@@ -419,7 +419,7 @@ static int wl1271_boot_run_firmware(struct wl1271 *wl)
 
 	chip_id = wl1271_read32(wl, CHIP_ID_B);
 
-	wl1271_debug(DEBUG_BOOT, "chip id after firmware boot: 0x%x", chip_id);
+	printk("chip id after firmware boot: 0x%x", chip_id);
 
 	if (chip_id != wl->chip.id) {
 		wl1271_error("chip id doesn't match after firmware boot");
@@ -431,6 +431,7 @@ static int wl1271_boot_run_firmware(struct wl1271 *wl)
 	while (loop++ < INIT_LOOP) {
 		udelay(INIT_LOOP_DELAY);
 		intr = wl1271_read32(wl, ACX_REG_INTERRUPT_NO_CLEAR);
+		printk("init loop, intr = 0x%08x\n", intr);
 
 		if (intr == 0xffffffff) {
 			wl1271_error("error reading hardware complete "
