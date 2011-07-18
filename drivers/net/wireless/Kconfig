@@ -17,6 +17,13 @@ menuconfig WLAN
 
 if WLAN
 
+config G2100
+	tristate "G2100 based Wireless device support"
+	select WIRELESS_EXT
+	select WEXT_PRIV
+	---help---
+	  Say Y if you want to use wireless LAN adapters based on the G2100
+
 config PCMCIA_RAYCS
 	tristate "Aviator/Raytheon 2.4GHz wireless support"
 	depends on PCMCIA
