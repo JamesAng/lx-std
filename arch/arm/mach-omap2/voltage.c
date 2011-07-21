@@ -40,6 +40,7 @@
 
 #include "vc.h"
 #include "vp.h"
+#include "abb.h"
 
 static LIST_HEAD(voltdm_list);
 
@@ -279,6 +280,9 @@ int __init omap_voltage_late_init(void)
 			voltdm->scale = omap_vp_forceupdate_scale;
 			omap_vp_init(voltdm);
 		}
+
+		if (voltdm->abb)
+			omap_abb_init(voltdm);
 	}
 
 	return 0;
