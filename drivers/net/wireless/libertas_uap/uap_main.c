@@ -41,7 +41,7 @@
  */
 uap_private *uappriv = NULL;
 #ifdef DEBUG_LEVEL1
-#define DEFAULT_DEBUG_MASK	(DBG_MSG | DBG_FATAL | DBG_ERROR)
+#define DEFAULT_DEBUG_MASK	(DBG_MSG | DBG_FATAL | DBG_ERROR | DBG_ENTRY | DBG_WARN | DBG_INFO)
 u32 drvdbg = DEFAULT_DEBUG_MASK;
 #endif
 /** Helper name */

@@ -50,6 +50,7 @@
 #endif
 
 /** Debug Macro definition*/
+#define DEBUG_LEVEL1 1
 #ifdef	DEBUG_LEVEL1
 
 extern u32 drvdbg;
