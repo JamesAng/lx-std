@@ -55,7 +55,7 @@ extern u8 *fw_name;
 /** Default helper name */
 #define DEFAULT_HELPER_NAME "mrvl/helper_sd.bin"
 /** Default firmware name */
-#define DEFAULT_FW_NAME "mrvl/sd8688_ap.bin"
+#define DEFAULT_FW_NAME "mrvl/sd8686_ap.bin"
 
 /********************************************************
 		Local Functions
@@ -600,9 +600,11 @@ uap_resume(struct sdio_func *func)
 #endif
 
 /** Device ID for SD8688 */
+#define  SD_DEVICE_ID_8686_UAP 0x9103
 #define  SD_DEVICE_ID_8688_UAP 0x9104
 /** UAP IDs */
 static const struct sdio_device_id uap_ids[] = {
+    {SDIO_DEVICE(SDIO_VENDOR_ID_MARVELL, SD_DEVICE_ID_8686_UAP)},
     {SDIO_DEVICE(SDIO_VENDOR_ID_MARVELL, SD_DEVICE_ID_8688_UAP)},
     {},
 };

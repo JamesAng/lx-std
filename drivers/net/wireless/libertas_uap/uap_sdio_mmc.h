@@ -100,13 +100,13 @@ Change log:
 #define CARD_OCR_1_REG               	0x35
 
 /** Firmware status 0 register */
-#define CARD_FW_STATUS0_REG		0x40
+#define CARD_FW_STATUS0_REG		0x34
 /** Firmware status 1 register */
-#define CARD_FW_STATUS1_REG		0x41
+#define CARD_FW_STATUS1_REG		0x35
 /** Rx length register */
-#define CARD_RX_LEN_REG			0x42
+#define CARD_RX_LEN_REG			0x80fd
 /** Rx unit register */
-#define CARD_RX_UNIT_REG		0x43
+#define CARD_RX_UNIT_REG		0x80fc
 
 /** Chip Id Register 0 */
 #define CARD_CHIP_ID_0_REG		0x801c
