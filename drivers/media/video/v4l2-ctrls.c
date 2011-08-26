@@ -43,7 +43,7 @@ struct v4l2_ctrl_helper {
 };
 
 /* Small helper function to determine if the autocluster is set to manual
-   mode. In that case the is_volatile flag should be ignored. */
+   mode. */
 static bool is_cur_manual(const struct v4l2_ctrl *master)
 {
 	return master->is_auto && master->cur.val == master->manual_mode_value;
@@ -1152,10 +1152,8 @@ struct v4l2_ctrl *v4l2_ctrl_new_custom(struct v4l2_ctrl_handler *hdl,
 			type, min, max,
 			is_menu ? cfg->menu_skip_mask : step,
 			def, flags, qmenu, priv);
-	if (ctrl) {
+	if (ctrl)
 		ctrl->is_private = cfg->is_private;
-		ctrl->is_volatile = cfg->is_volatile;
-	}
 	return ctrl;
 }
 EXPORT_SYMBOL(v4l2_ctrl_new_custom);
@@ -1277,12 +1275,12 @@ void v4l2_ctrl_auto_cluster(unsigned ncontrols, struct v4l2_ctrl **controls,
 	master->manual_mode_value = manual_val;
 	master->flags |= V4L2_CTRL_FLAG_UPDATE;
 	flag = is_cur_manual(master) ? 0 : V4L2_CTRL_FLAG_INACTIVE;
+	if (set_volatile)
+		flag |= V4L2_CTRL_FLAG_VOLATILE;
 
 	for (i = 1; i < ncontrols; i++)
-		if (controls[i]) {
-			controls[i]->is_volatile = set_volatile;
+		if (controls[i])
 			controls[i]->flags |= flag;
-		}
 }
 EXPORT_SYMBOL(v4l2_ctrl_auto_cluster);
 
@@ -1337,9 +1335,6 @@ EXPORT_SYMBOL(v4l2_ctrl_grab);
 static void log_ctrl(const struct v4l2_ctrl *ctrl,
 		     const char *prefix, const char *colon)
 {
-	int fl_inact = ctrl->flags & V4L2_CTRL_FLAG_INACTIVE;
-	int fl_grabbed = ctrl->flags & V4L2_CTRL_FLAG_GRABBED;
-
 	if (ctrl->flags & (V4L2_CTRL_FLAG_DISABLED | V4L2_CTRL_FLAG_WRITE_ONLY))
 		return;
 	if (ctrl->type == V4L2_CTRL_TYPE_CTRL_CLASS)
@@ -1367,14 +1362,17 @@ static void log_ctrl(const struct v4l2_ctrl *ctrl,
 		printk(KERN_CONT "unknown type %d", ctrl->type);
 		break;
 	}
-	if (fl_inact && fl_grabbed)
-		printk(KERN_CONT " (inactive, grabbed)\n");
-	else if (fl_inact)
-		printk(KERN_CONT " (inactive)\n");
-	else if (fl_grabbed)
-		printk(KERN_CONT " (grabbed)\n");
-	else
-		printk(KERN_CONT "\n");
+	if (ctrl->flags & (V4L2_CTRL_FLAG_INACTIVE |
+			   V4L2_CTRL_FLAG_GRABBED |
+			   V4L2_CTRL_FLAG_VOLATILE)) {
+		if (ctrl->flags & V4L2_CTRL_FLAG_INACTIVE)
+			printk(KERN_CONT " inactive");
+		if (ctrl->flags & V4L2_CTRL_FLAG_GRABBED)
+			printk(KERN_CONT " grabbed");
+		if (ctrl->flags & V4L2_CTRL_FLAG_VOLATILE)
+			printk(KERN_CONT " volatile");
+	}
+	printk(KERN_CONT "\n");
 }
 
 /* Log all controls owned by the handler */
@@ -1759,7 +1757,7 @@ static int get_ctrl(struct v4l2_ctrl *ctrl, s32 *val)
 
 	v4l2_ctrl_lock(master);
 	/* g_volatile_ctrl will update the current control values */
-	if (ctrl->is_volatile && !is_cur_manual(master)) {
+	if ((ctrl->flags & V4L2_CTRL_FLAG_VOLATILE) && !is_cur_manual(master)) {
 		for (i = 0; i < master->ncontrols; i++)
 			cur_to_new(master->cluster[i]);
 		ret = call_op(master, g_volatile_ctrl);
