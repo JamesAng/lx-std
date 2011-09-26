@@ -146,6 +146,7 @@ static void __init overo_init_smsc911x(void)
 static inline void __init overo_init_smsc911x(void) { return; }
 #endif
 
+#if defined(CONFIG_OMAP2_DSS) || defined(CONFIG_OMAP2_DSS_MODULE)
 /* DSS */
 static int lcd_enabled;
 static int dvi_enabled;
@@ -157,17 +158,6 @@ static struct gpio overo_dss_gpios[] __initdata = {
 	{ OVERO_GPIO_LCD_EN, GPIOF_OUT_INIT_HIGH, "OVERO_GPIO_LCD_EN" },
 	{ OVERO_GPIO_LCD_BL, GPIOF_OUT_INIT_HIGH, "OVERO_GPIO_LCD_BL" },
 };
-
-static void __init overo_display_init(void)
-{
-	if (gpio_request_array(overo_dss_gpios, ARRAY_SIZE(overo_dss_gpios))) {
-		printk(KERN_ERR "could not obtain DSS control GPIOs\n");
-		return;
-	}
-
-	gpio_export(OVERO_GPIO_LCD_EN, 0);
-	gpio_export(OVERO_GPIO_LCD_BL, 0);
-}
 
 static int overo_panel_enable_dvi(struct omap_dss_device *dssdev)
 {
@@ -267,6 +257,21 @@ static struct omap_dss_board_info overo_dss_data = {
 	.devices	= overo_dss_devices,
 	.default_device	= &overo_dvi_device,
 };
+
+static void __init overo_display_init(void)
+{
+	if (gpio_request_array(overo_dss_gpios, ARRAY_SIZE(overo_dss_gpios))) {
+		printk(KERN_ERR "could not obtain DSS control GPIOs\n");
+		return;
+	}
+
+	gpio_export(OVERO_GPIO_LCD_EN, 0);
+	gpio_export(OVERO_GPIO_LCD_BL, 0);
+	omap_display_init(&overo_dss_data);
+}
+#else
+static inline void __init overo_display_init(void) { return; }
+#endif
 
 static struct mtd_partition overo_nand_partitions[] = {
 	{
@@ -596,7 +601,6 @@ static void __init overo_init(void)
 
 	omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
 	overo_i2c_init();
-	omap_display_init(&overo_dss_data);
 	omap_serial_init();
 	omap_nand_flash_init(0, overo_nand_partitions,
 			     ARRAY_SIZE(overo_nand_partitions));
