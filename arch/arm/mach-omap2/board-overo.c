@@ -692,7 +692,7 @@ static void __init overo_init(void)
 {
 	int ret;
 
-	omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
+//	omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
 	overo_init_led();
 	overo_init_keys();
 	overo_i2c_init();
