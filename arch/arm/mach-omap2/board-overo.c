@@ -391,15 +391,27 @@ static struct regulator_consumer_supply overo_vmmc1_supply[] = {
 
 static struct gpio_led gpio_leds[] = {
 	{
-		.name			= "overo:red:gpio21",
-		.default_trigger	= "heartbeat",
-		.gpio			= 21,
+		.name			= "overo:red:gpio66",
+		.default_trigger	= "none",
+		.gpio			= 66,
 		.active_low		= true,
 	},
 	{
-		.name			= "overo:blue:gpio22",
+		.name			= "overo:green:gpio67",
 		.default_trigger	= "none",
-		.gpio			= 22,
+		.gpio			= 67,
+		.active_low		= true,
+	},
+	{
+		.name			= "overo:red:gpio68",
+		.default_trigger	= "none",
+		.gpio			= 68,
+		.active_low		= true,
+	},
+	{
+		.name			= "overo:blue:gpio69",
+		.default_trigger	= "none",
+		.gpio			= 69,
 		.active_low		= true,
 	},
 	{
@@ -480,7 +492,7 @@ static int overo_twl_gpio_setup(struct device *dev,
 
 #if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
 	/* TWL4030_GPIO_MAX + 1 == ledB, PMU_STAT (out, active low LED) */
-	gpio_leds[2].gpio = gpio + TWL4030_GPIO_MAX + 1;
+	gpio_leds[4].gpio = gpio + TWL4030_GPIO_MAX + 1;
 #endif
 
 	return 0;
