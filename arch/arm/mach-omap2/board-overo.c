@@ -409,8 +409,8 @@ static struct gpio_led gpio_leds[] = {
 		.active_low		= true,
 	},
 	{
-		.name			= "overo:blue:gpio69",
-		.default_trigger	= "none",
+		.name			= "overo:green:gpio69",
+		.default_trigger	= "default-on",
 		.gpio			= 69,
 		.active_low		= true,
 	},
@@ -451,14 +451,14 @@ static inline void __init overo_init_led(void) { return; }
 static struct gpio_keys_button gpio_buttons[] = {
 	{
 		.code			= BTN_0,
-		.gpio			= 23,
-		.desc			= "button0",
+		.gpio			= 176,
+		.desc			= "button0-npbint",
 		.wakeup			= 1,
 	},
 	{
 		.code			= BTN_1,
-		.gpio			= 14,
-		.desc			= "button1",
+		.gpio			= 186,
+		.desc			= "button1-nkill",
 		.wakeup			= 1,
 	},
 };
@@ -693,6 +693,8 @@ static void __init overo_init(void)
 	int ret;
 
 	omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
+	overo_init_led();
+	overo_init_keys();
 	overo_i2c_init();
 #if defined(CONFIG_PANEL_GENERIC_DPI) || defined(CONFIG_PANEL_GENERIC_DPI_MODULE)
 	omap_display_init(&overo_dss_data);
@@ -706,8 +708,6 @@ static void __init overo_init(void)
 	overo_init_usbhs();
 	overo_spi_init();
 	overo_init_smsc911x();
-	overo_init_led();
-	overo_init_keys();
 	overo_opp_init();
 	overo_camera_init();
 
