@@ -76,53 +76,44 @@
 
 #if defined(CONFIG_VIDEO_OMAP3) || defined(CONFIG_VIDEO_OMAP3_MODULE)
 
-#include <media/mt9v032.h>
+#include <media/mt9m032.h>
 #include "devices.h"
 #include "../../../drivers/media/video/omap3isp/isp.h"
 
-#define MT9V032_I2C_ADDR	0x5C
-#define MT9V032_I2C_BUS_NUM	3
-#define MT9V032_XCLK		ISP_XCLK_A
+#define MT9M032_I2C_BUS_NUM	3
 
-static void mt9v032_set_clock(struct v4l2_subdev *subdev, int hz)
-{
-	struct isp_device *isp = v4l2_dev_to_isp_device(subdev->v4l2_dev);
-
-	printk("overo: setting xclk to %d hz\n", hz);
-	isp->platform_cb.set_xclk(isp, hz, MT9V032_XCLK);
-}
-
-static struct mt9v032_platform_data mt9v032_platform_data = {
-	.clk_pol		= 0,
-	.set_clock               = mt9v032_set_clock,
+static struct mt9m032_platform_data mt9m032_platform_data = {
+	.ext_clock = 13500000,
+	.pix_clock = 54000000,
+	.invert_pixclock = 1,
 };
 
-static struct i2c_board_info mt9v032_i2c_device = {
-	I2C_BOARD_INFO("mt9v032", MT9V032_I2C_ADDR),
-	.platform_data = &mt9v032_platform_data,
+static struct i2c_board_info mt9m032_i2c_device = {
+	I2C_BOARD_INFO(MT9M032_NAME, MT9M032_I2C_ADDR),
+	.platform_data = &mt9m032_platform_data,
 };
 
-static struct isp_subdev_i2c_board_info mt9v032_subdevs[] = {
+static struct isp_subdev_i2c_board_info mt9m032_subdevs[] = {
 	{
-		.board_info = &mt9v032_i2c_device,
-		.i2c_adapter_id = MT9V032_I2C_BUS_NUM,
+		.board_info = &mt9m032_i2c_device,
+		.i2c_adapter_id = MT9M032_I2C_BUS_NUM,
 	},
-	{ NULL, 0, },
+	{ },
 };
 
 static struct isp_v4l2_subdevs_group overo_camera_subdevs[] = {
 	{
-		.subdevs = mt9v032_subdevs,
+		.subdevs = mt9m032_subdevs,
 		.interface = ISP_INTERFACE_PARALLEL,
 		.bus = {
 				.parallel = {
-					.data_lane_shift = 0,
+					.data_lane_shift = ISP_LANE_SHIFT_0,
 					.clk_pol = 0,
 					.bridge = ISPCTRL_PAR_BRIDGE_DISABLE,
 				}
 		},
 	},
-	{ NULL, 0, },
+	{ },
 };
 
 static struct isp_platform_data overo_isp_platform_data = {
