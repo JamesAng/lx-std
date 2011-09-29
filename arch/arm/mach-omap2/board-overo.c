@@ -71,6 +71,61 @@
 #define OVERO_SMSC911X2_CS     4
 #define OVERO_SMSC911X2_GPIO   65
 
+#if defined(CONFIG_VIDEO_OMAP3) || defined(CONFIG_VIDEO_OMAP3_MODULE)
+
+#include <media/mt9m032.h>
+#include "devices.h"
+#include "../../../drivers/media/video/omap3isp/isp.h"
+
+#define MT9M032_I2C_BUS_NUM	3
+
+static struct mt9m032_platform_data mt9m032_platform_data = {
+	.ext_clock = 13500000,
+	.pix_clock = 54000000,
+	.invert_pixclock = 0,
+};
+
+static struct i2c_board_info mt9m032_i2c_device = {
+	I2C_BOARD_INFO(MT9M032_NAME, MT9M032_I2C_ADDR),
+	.platform_data = &mt9m032_platform_data,
+};
+
+static struct isp_subdev_i2c_board_info mt9m032_subdevs[] = {
+	{
+		.board_info = &mt9m032_i2c_device,
+		.i2c_adapter_id = MT9M032_I2C_BUS_NUM,
+	},
+	{ },
+};
+
+static struct isp_v4l2_subdevs_group overo_camera_subdevs[] = {
+	{
+		.subdevs = mt9m032_subdevs,
+		.interface = ISP_INTERFACE_PARALLEL,
+		.bus = {
+				.parallel = {
+					.data_lane_shift = ISP_LANE_SHIFT_0,
+					.clk_pol = 1,
+					.bridge = ISPCTRL_PAR_BRIDGE_DISABLE,
+				}
+		},
+	},
+	{ },
+};
+
+static struct isp_platform_data overo_isp_platform_data = {
+	.subdevs = overo_camera_subdevs,
+};
+
+static int __init overo_camera_init(void)
+{
+       return omap3_init_camera(&overo_isp_platform_data);
+}
+
+#else
+static inline void overo_camera_init(void) { return; }
+#endif
+
 #if defined(CONFIG_TOUCHSCREEN_ADS7846) || \
 	defined(CONFIG_TOUCHSCREEN_ADS7846_MODULE)
 
@@ -785,6 +840,7 @@ static void __init overo_init(void)
 	overo_display_init();
 	overo_init_led();
 	overo_init_keys();
+	overo_camera_init();
 
 	/* Ensure SDRC pins are mux'd for self-refresh */
 	omap_mux_init_signal("sdrc_cke0", OMAP_PIN_OUTPUT);
