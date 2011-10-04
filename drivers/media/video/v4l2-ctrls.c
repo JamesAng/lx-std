@@ -389,6 +389,35 @@ const char *v4l2_ctrl_get_name(u32 id)
 	case V4L2_CID_TUNE_POWER_LEVEL:		return "Tune Power Level";
 	case V4L2_CID_TUNE_ANTENNA_CAPACITOR:	return "Tune Antenna Capacitor";
 
+	/* Flash controls */
+	case V4L2_CID_FLASH_CLASS:		return "Flash Controls";
+	case V4L2_CID_FLASH_LED_MODE:		return "LED Mode";
+	case V4L2_CID_FLASH_STROBE_SOURCE:	return "Strobe Source";
+	case V4L2_CID_FLASH_STROBE:		return "Strobe";
+	case V4L2_CID_FLASH_STROBE_STOP:	return "Stop Strobe";
+	case V4L2_CID_FLASH_STROBE_STATUS:	return "Strobe Status";
+	case V4L2_CID_FLASH_TIMEOUT:		return "Strobe Timeout";
+	case V4L2_CID_FLASH_INTENSITY:		return "Intensity, Flash Mode";
+	case V4L2_CID_FLASH_TORCH_INTENSITY:	return "Intensity, Torch Mode";
+	case V4L2_CID_FLASH_INDICATOR_INTENSITY: return "Intensity, Indicator";
+	case V4L2_CID_FLASH_FAULT:		return "Faults";
+	case V4L2_CID_FLASH_CHARGE:		return "Charge";
+	case V4L2_CID_FLASH_READY:		return "Ready to Strobe";
+
+	/* JPEG encoder controls */
+	/* Keep the order of the 'case's the same as in videodev2.h! */
+	case V4L2_CID_JPEG_CLASS:		return "JPEG Compression Controls";
+	case V4L2_CID_JPEG_CHROMA_SUBSAMPLING:	return "Chroma Subsampling";
+	case V4L2_CID_JPEG_RESTART_INTERVAL:	return "Restart Interval";
+	case V4L2_CID_JPEG_COMPRESSION_QUALITY:	return "Compression Quality";
+	case V4L2_CID_JPEG_ACTIVE_MARKER:	return "Active Markers";
+
+	/* Image source controls */
+	case V4L2_CID_IMAGE_SOURCE_CLASS:	return "Image Source Controls";
+	case V4L2_CID_VBLANK:			return "Vertical Blanking";
+	case V4L2_CID_HBLANK:			return "Horizontal Blanking";
+	case V4L2_CID_ANALOGUE_GAIN:		return "Analogue Gain";
+
 	default:
 		return NULL;
 	}
@@ -462,6 +491,9 @@ void v4l2_ctrl_fill(u32 id, const char **name, enum v4l2_ctrl_type *type,
 	case V4L2_CID_CAMERA_CLASS:
 	case V4L2_CID_MPEG_CLASS:
 	case V4L2_CID_FM_TX_CLASS:
+	case V4L2_CID_FLASH_CLASS:
+	case V4L2_CID_JPEG_CLASS:
+	case V4L2_CID_IMAGE_SOURCE_CLASS:
 		*type = V4L2_CTRL_TYPE_CTRL_CLASS;
 		/* You can neither read not write these */
 		*flags |= V4L2_CTRL_FLAG_READ_ONLY | V4L2_CTRL_FLAG_WRITE_ONLY;
