@@ -34,6 +34,10 @@
 struct omap_mcbsp **mcbsp_ptr;
 int omap_mcbsp_count, omap_mcbsp_cache_size;
 
+EXPORT_SYMBOL(mcbsp_ptr);
+EXPORT_SYMBOL(omap_mcbsp_count);
+EXPORT_SYMBOL(omap_mcbsp_cache_size);
+
 static void omap_mcbsp_write(struct omap_mcbsp *mcbsp, u16 reg, u32 val)
 {
 	if (cpu_class_is_omap1()) {
