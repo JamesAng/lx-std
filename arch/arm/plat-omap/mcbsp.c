@@ -32,6 +32,9 @@ int omap_mcbsp_count;
 #define omap_mcbsp_check_valid_id(id)	(id < omap_mcbsp_count)
 #define id_to_mcbsp_ptr(id)		mcbsp_ptr[id];
 
+EXPORT_SYMBOL(mcbsp_ptr);
+EXPORT_SYMBOL(omap_mcbsp_count);
+
 static void omap_mcbsp_write(struct omap_mcbsp *mcbsp, u16 reg, u32 val)
 {
 	void __iomem *addr = mcbsp->io_base + reg * mcbsp->pdata->reg_step;
