@@ -1997,6 +1997,7 @@ static int isp_remove(struct platform_device *pdev)
 
 	omap3isp_get(isp);
 	iommu_put(isp->iommu);
+	isp->iommu = NULL;
 	omap3isp_put(isp);
 
 	free_irq(isp->irq_num, isp);
