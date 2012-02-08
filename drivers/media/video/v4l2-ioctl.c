@@ -444,7 +444,7 @@ __video_usercopy(struct file *file, unsigned int cmd, unsigned long arg,
 	/* Handles IOCTL */
 	err = func(file, cmd, parg);
 	if (err == -ENOIOCTLCMD)
-		err = -EINVAL;
+		err = -ENOTTY;
 	if (is_ext_ctrl) {
 		struct v4l2_ext_controls *p = parg;
 
