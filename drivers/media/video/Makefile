@@ -22,6 +22,10 @@ endif
 
 obj-$(CONFIG_VIDEO_V4L2_COMMON) += v4l2-common.o
 
+# Helper modules
+
+obj-$(CONFIG_VIDEO_APTINA_PLL) += aptina-pll.o
+
 # All i2c modules must come first:
 
 obj-$(CONFIG_VIDEO_TUNER) += tuner.o
