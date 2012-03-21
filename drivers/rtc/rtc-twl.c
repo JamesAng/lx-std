@@ -513,11 +513,11 @@ static int __devinit twl_rtc_probe(struct platform_device *pdev)
 		goto out2;
 
 	/* enable backup battery charging */
-	/* use a conservative 25uA @ 3.1V */
+	/* use 500uA @ 3.1V */
 	ret = twl_i2c_write_u8(TWL4030_MODULE_PM_RECEIVER,
 		BIT_PM_RECEIVER_BB_CFG_BBCHEN |
 		BIT_PM_RECEIVER_BB_CFG_BBSEL_3V1 |
-		BIT_PM_RECEIVER_BB_CFG_BBISEL_25UA,
+		BIT_PM_RECEIVER_BB_CFG_BBISEL_500UA,
 		REG_BB_CFG);
 
 	return ret;
