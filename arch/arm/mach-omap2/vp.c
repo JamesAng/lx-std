@@ -119,9 +119,13 @@ int omap_vp_forceupdate_scale(struct voltagedomain *voltdm,
 	u8 target_vsel, current_vsel;
 	int ret = 0, timeout = 0;
 
+
+
 	ret = omap_vc_pre_scale(voltdm, target_volt, &target_vsel, &current_vsel);
 	if (ret)
 		return ret;
+
+pr_err("%s: target_volt = %ld, target_vsel = %02x, current_vsel = %02x\n", __func__, target_volt, target_vsel, current_vsel); /*gsg*/
 
 	/*
 	 * Clear all pending TransactionDone interrupt/status. Typical latency
@@ -138,6 +142,8 @@ int omap_vp_forceupdate_scale(struct voltagedomain *voltdm,
 			"Voltage change aborted", __func__, voltdm->name);
 		return -ETIMEDOUT;
 	}
+
+pr_err("%s: target_volt = %ld", __func__, target_volt); /*gsg*/
 
 	vpconfig = _vp_set_init_voltage(voltdm, target_volt);
 
@@ -156,6 +162,10 @@ int omap_vp_forceupdate_scale(struct voltagedomain *voltdm,
 		pr_err("%s: vdd_%s TRANXDONE timeout exceeded."
 			"TRANXDONE never got set after the voltage update\n",
 			__func__, voltdm->name);
+
+pr_err("%s: target_volt = %ld, target_vsel = %02x, current_vsel = %02x\n", __func__, target_volt, target_vsel, current_vsel); /*gsg*/
+
+pr_err("%s: nominal_volt = %d\n", __func__, voltdm->nominal_volt);
 
 	omap_vc_post_scale(voltdm, target_volt, target_vsel, current_vsel);
 
@@ -181,8 +191,10 @@ int omap_vp_forceupdate_scale(struct voltagedomain *voltdm,
 
 	/* transition Adaptive Body-Bias LDO */
 	if (voltdm->abb)
-		ret = omap_abb_set_opp(voltdm);
-
+{
+pr_warning("%s: GSG\n", __func__);
+		ret = omap_abb_set_opp(voltdm, target_volt);
+}
 	return ret;
 }
 

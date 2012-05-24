@@ -86,10 +86,12 @@ int voltdm_scale(struct voltagedomain *voltdm,
 		return -ENODATA;
 	}
 
+pr_err("%s: target_volt = %ld, nominal_volt = %d\n", __func__, target_volt, voltdm->nominal_volt); /*gsg*/
 	ret = voltdm->scale(voltdm, target_volt);
 	if (!ret)
 		voltdm->nominal_volt = target_volt;
 
+pr_err("%s: ret = %d, target_volt = %ld, nominal_volt = %d\n", __func__, ret, target_volt, voltdm->nominal_volt);/*gsg*/
 	return ret;
 }
 
@@ -175,7 +177,10 @@ struct omap_volt_data *omap_voltage_get_voltdata(struct voltagedomain *voltdm,
 		return ERR_PTR(-ENODATA);
 	}
 
+pr_notice("Search for voltage %ld\n", volt); /*Gsg*/
+
 	for (i = 0; voltdm->volt_data[i].volt_nominal != 0; i++) {
+	    pr_notice("i = %d, volt_nominal = %d\n", i, voltdm->volt_data[i].volt_nominal);/*gsg*/
 		if (voltdm->volt_data[i].volt_nominal == volt)
 			return &voltdm->volt_data[i];
 	}

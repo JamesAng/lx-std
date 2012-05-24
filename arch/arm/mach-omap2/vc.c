@@ -195,8 +195,10 @@ int omap_vc_bypass_scale(struct voltagedomain *voltdm,
 
 	/* transition Adaptive Body-Bias ldo */
 	if (voltdm->abb)
-		ret = omap_abb_set_opp(voltdm);
-
+{
+pr_warning("%s: GSG\n", __func__);
+		ret = omap_abb_set_opp(voltdm, target_volt);
+}
 	return ret;
 }
 
