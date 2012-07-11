@@ -77,6 +77,7 @@
 #define MT9V032_PIXEL_OPERATION_MODE			0x0f
 #define		MT9V032_PIXEL_OPERATION_MODE_COLOR	(1 << 2)
 #define		MT9V032_PIXEL_OPERATION_MODE_HDR	(1 << 6)
+#define MT9V032_LED_OUT_CTRL				0x1b
 #define MT9V032_ANALOG_GAIN				0x35
 #define		MT9V032_ANALOG_GAIN_MIN			16
 #define		MT9V032_ANALOG_GAIN_DEF			16
@@ -202,6 +203,10 @@ static int mt9v032_power_on(struct mt9v032 *mt9v032)
 		return ret;
 
 	ret = mt9v032_write(client, MT9V032_RESET, 0);
+	if (ret < 0)
+		return ret;
+
+	ret = mt9v032_write(client, MT9V032_LED_OUT_CTRL, 1);
 	if (ret < 0)
 		return ret;
 
