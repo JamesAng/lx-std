@@ -29,9 +29,6 @@
 struct omap_mcbsp **mcbsp_ptr;
 int omap_mcbsp_count;
 
-#define omap_mcbsp_check_valid_id(id)	(id < omap_mcbsp_count)
-#define id_to_mcbsp_ptr(id)		mcbsp_ptr[id];
-
 EXPORT_SYMBOL(mcbsp_ptr);
 EXPORT_SYMBOL(omap_mcbsp_count);
 
