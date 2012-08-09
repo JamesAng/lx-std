@@ -202,7 +202,7 @@ static void __init overo_init_smsc911x(void)
 static inline void __init overo_init_smsc911x(void) { return; }
 #endif
 
-#if defined(CONFIG_PANEL_DVI) || defined(CONFIG_PANEL_DVI_MODULE)
+#if defined(CONFIG_OMAP2_DSS) || defined(CONFIG_OMAP2_DSS_MODULE)
 /* DSS */
 static int lcd_enabled;
 static int dvi_enabled;
@@ -214,17 +214,6 @@ static struct gpio overo_dss_gpios[] __initdata = {
 	{ OVERO_GPIO_LCD_EN, GPIOF_OUT_INIT_HIGH, "OVERO_GPIO_LCD_EN" },
 	{ OVERO_GPIO_LCD_BL, GPIOF_OUT_INIT_HIGH, "OVERO_GPIO_LCD_BL" },
 };
-
-static void __init overo_display_init(void)
-{
-	if (gpio_request_array(overo_dss_gpios, ARRAY_SIZE(overo_dss_gpios))) {
-		printk(KERN_ERR "could not obtain DSS control GPIOs\n");
-		return;
-	}
-
-	gpio_export(OVERO_GPIO_LCD_EN, 0);
-	gpio_export(OVERO_GPIO_LCD_BL, 0);
-}
 
 static int overo_panel_enable_dvi(struct omap_dss_device *dssdev)
 {
@@ -241,27 +230,6 @@ static void overo_panel_disable_dvi(struct omap_dss_device *dssdev)
 {
 	dvi_enabled = 0;
 }
-
-static struct panel_dvi_platform_data dvi_panel = {
-	.platform_enable	= overo_panel_enable_dvi,
-	.platform_disable	= overo_panel_disable_dvi,
-	.i2c_bus_num		= 3,
-};
-
-static struct omap_dss_device overo_dvi_device = {
-	.name			= "dvi",
-	.type			= OMAP_DISPLAY_TYPE_DPI,
-	.driver_name		= "dvi",
-	.data			= &dvi_panel,
-	.phy.dpi.data_lines	= 24,
-};
-
-static struct omap_dss_device overo_tv_device = {
-	.name = "tv",
-	.driver_name = "venc",
-	.type = OMAP_DISPLAY_TYPE_VENC,
-	.phy.venc.type = OMAP_DSS_VENC_TYPE_SVIDEO,
-};
 
 static int overo_panel_enable_lcd(struct omap_dss_device *dssdev)
 {
@@ -283,6 +251,35 @@ static void overo_panel_disable_lcd(struct omap_dss_device *dssdev)
 	lcd_enabled = 0;
 }
 
+#if defined(CONFIG_PANEL_DVI) || \
+	defined(CONFIG_PANEL_DVI_MODULE)
+static struct panel_dvi_platform_data dvi_panel = {
+	.platform_enable	= overo_panel_enable_dvi,
+	.platform_disable	= overo_panel_disable_dvi,
+	.i2c_bus_num		= 3,
+};
+
+static struct omap_dss_device overo_dvi_device = {
+	.name			= "dvi",
+	.type			= OMAP_DISPLAY_TYPE_DPI,
+	.driver_name		= "dvi",
+	.data			= &dvi_panel,
+	.phy.dpi.data_lines	= 24,
+};
+#endif
+
+#if defined(CONFIG_OMAP2_DSS_VENC) || \
+	defined(CONFIG_OMAP2_DSS_VENC_MODULE)
+static struct omap_dss_device overo_tv_device = {
+	.name = "tv",
+	.driver_name = "venc",
+	.type = OMAP_DISPLAY_TYPE_VENC,
+	.phy.venc.type = OMAP_DSS_VENC_TYPE_SVIDEO,
+};
+#endif
+
+#if defined(CONFIG_PANEL_GENERIC_DPI) || \
+	defined(CONFIG_PANEL_GENERIC_DPI_MODULE)
 static struct panel_generic_dpi_data lcd43_panel = {
 	.name			= "samsung_lte430wq_f0c",
 	.platform_enable	= overo_panel_enable_lcd,
@@ -296,6 +293,7 @@ static struct omap_dss_device overo_lcd43_device = {
 	.data			= &lcd43_panel,
 	.phy.dpi.data_lines	= 24,
 };
+#endif
 
 #if defined(CONFIG_PANEL_LGPHILIPS_LB035Q02) || \
 	defined(CONFIG_PANEL_LGPHILIPS_LB035Q02_MODULE)
@@ -310,20 +308,48 @@ static struct omap_dss_device overo_lcd35_device = {
 #endif
 
 static struct omap_dss_device *overo_dss_devices[] = {
+#if defined(CONFIG_PANEL_DVI) || \
+	defined(CONFIG_PANEL_DVI_MODULE)
 	&overo_dvi_device,
+#endif
+#if defined(CONFIG_OMAP2_DSS_VENC) || \
+	defined(CONFIG_OMAP2_DSS_VENC_MODULE)
 	&overo_tv_device,
+#endif
 #if defined(CONFIG_PANEL_LGPHILIPS_LB035Q02) || \
 	defined(CONFIG_PANEL_LGPHILIPS_LB035Q02_MODULE)
 	&overo_lcd35_device,
 #endif
+#if defined(CONFIG_PANEL_GENERIC_DPI) || \
+	defined(CONFIG_PANEL_GENERIC_DPI_MODULE)
 	&overo_lcd43_device,
+#endif
 };
 
 static struct omap_dss_board_info overo_dss_data = {
 	.num_devices	= ARRAY_SIZE(overo_dss_devices),
 	.devices	= overo_dss_devices,
+/* FIXME: default device should be set in overo_display_init */
+/* taking into account what devices are actually available   */
+#if defined(CONFIG_PANEL_DVI) || \
+	defined(CONFIG_PANEL_DVI_MODULE)
 	.default_device	= &overo_dvi_device,
+#endif
 };
+
+static void __init overo_display_init(void)
+{
+	omap_display_init(&overo_dss_data);
+	if (gpio_request_array(overo_dss_gpios, ARRAY_SIZE(overo_dss_gpios))) {
+		printk(KERN_ERR "could not obtain DSS control GPIOs\n");
+		return;
+	}
+
+	gpio_export(OVERO_GPIO_LCD_EN, 0);
+	gpio_export(OVERO_GPIO_LCD_BL, 0);
+}
+#else
+static inline void __init overo_display_init(void) { return; }
 #endif
 
 static struct mtd_partition overo_nand_partitions[] = {
@@ -673,10 +699,7 @@ static void __init overo_init(void)
 
 	omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
 	overo_i2c_init();
-#if defined(CONFIG_PANEL_GENERIC_DPI) || defined(CONFIG_PANEL_GENERIC_DPI_MODULE)
-	omap_display_init(&overo_dss_data);
 	overo_display_init();
-#endif
 	omap_serial_init();
 	omap_sdrc_init(NULL, NULL);
 	omap_nand_flash_init(0, overo_nand_partitions,
