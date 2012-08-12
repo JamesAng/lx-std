@@ -415,6 +415,18 @@ static struct gpio_led gpio_leds[] = {
 		.active_low		= true,
 	},
 	{
+		.name			= "overo:red:gpio79",
+		.default_trigger	= "none",
+		.gpio			= 79,
+		.active_low		= true,
+	},
+	{
+		.name			= "overo:green:gpio78",
+		.default_trigger	= "default-on",
+		.gpio			= 78,
+		.active_low		= true,
+	},
+	{
 		.name			= "overo:blue:COM",
 		.default_trigger	= "mmc0",
 		.gpio			= -EINVAL,	/* gets replaced */
@@ -492,7 +504,7 @@ static int overo_twl_gpio_setup(struct device *dev,
 
 #if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
 	/* TWL4030_GPIO_MAX + 1 == ledB, PMU_STAT (out, active low LED) */
-	gpio_leds[4].gpio = gpio + TWL4030_GPIO_MAX + 1;
+	gpio_leds[6].gpio = gpio + TWL4030_GPIO_MAX + 1;
 #endif
 
 	return 0;
