@@ -38,11 +38,12 @@
 #define M41T80_REG_DAY	5
 #define M41T80_REG_MON	6
 #define M41T80_REG_YEAR	7
-#define M41T80_REG_ALARM_MON	0xa
-#define M41T80_REG_ALARM_DAY	0xb
-#define M41T80_REG_ALARM_HOUR	0xc
-#define M41T80_REG_ALARM_MIN	0xd
-#define M41T80_REG_ALARM_SEC	0xe
+/* HACK to use alarm2 instead of alarm1 */
+#define M41T80_REG_ALARM_MON	0x14
+#define M41T80_REG_ALARM_DAY	0x15
+#define M41T80_REG_ALARM_HOUR	0x16
+#define M41T80_REG_ALARM_MIN	0x17
+#define M41T80_REG_ALARM_SEC	0x18
 #define M41T80_REG_FLAGS	0xf
 #define M41T80_REG_SQW	0x13
 
@@ -54,7 +55,7 @@
 #define M41T80_ALMON_AFE	(1 << 7)	/* AFE: AF Enable Bit */
 #define M41T80_ALMON_SQWE	(1 << 6)	/* SQWE: SQW Enable Bit */
 #define M41T80_ALHOUR_HT	(1 << 6)	/* HT: Halt Update Bit */
-#define M41T80_FLAGS_AF		(1 << 6)	/* AF: Alarm Flag Bit */
+#define M41T80_FLAGS_AF		(1 << 5)	/* AF: Alarm Flag Bit */
 #define M41T80_FLAGS_BATT_LOW	(1 << 4)	/* BL: Battery Low Bit */
 #define M41T80_WATCHDOG_RB2	(1 << 7)	/* RB: Watchdog resolution */
 #define M41T80_WATCHDOG_RB1	(1 << 1)	/* RB: Watchdog resolution */
@@ -308,7 +309,7 @@ static int m41t80_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *t)
 static int m41t80_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *t)
 {
 	struct i2c_client *client = to_i2c_client(dev);
-	u8 buf[M41T80_ALARM_REG_SIZE + 1]; /* all alarm regs and flags */
+	u8 buf[M41T80_ALARM_REG_SIZE]; /* all alarm regs */
 	u8 dt_addr[1] = { M41T80_REG_ALARM_MON };
 	u8 *reg = buf - M41T80_REG_ALARM_MON;
 	struct i2c_msg msgs[] = {
@@ -321,7 +322,7 @@ static int m41t80_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *t)
 		{
 			.addr	= client->addr,
 			.flags	= I2C_M_RD,
-			.len	= M41T80_ALARM_REG_SIZE + 1,
+			.len	= M41T80_ALARM_REG_SIZE,
 			.buf	= buf,
 		},
 	};
@@ -350,7 +351,7 @@ static int m41t80_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *t)
 	t->time.tm_yday = -1;
 	t->time.tm_isdst = -1;
 	t->enabled = !!(reg[M41T80_REG_ALARM_MON] & M41T80_ALMON_AFE);
-	t->pending = !!(reg[M41T80_REG_FLAGS] & M41T80_FLAGS_AF);
+	t->pending = !!(i2c_smbus_read_byte_data(client, M41T80_REG_FLAGS) & M41T80_FLAGS_AF);
 	return 0;
 }
 
@@ -482,11 +483,11 @@ static int m41t80_sysfs_register(struct device *dev)
 static struct i2c_client *save_client;
 
 /* Default margin */
-#define WD_TIMO 60		/* 1..31 seconds */
+#define WD_TIMO 30		/* 1..31 seconds */
 
 static int wdt_margin = WD_TIMO;
 module_param(wdt_margin, int, 0);
-MODULE_PARM_DESC(wdt_margin, "Watchdog timeout in seconds (default 60s)");
+MODULE_PARM_DESC(wdt_margin, "Watchdog timeout in seconds (default 30s)");
 
 static unsigned long wdt_is_open;
 static int boot_flag;
@@ -512,13 +513,17 @@ static void wdt_ping(void)
 
 	i2c_data[0] = 0x09;		/* watchdog register */
 
-	if (wdt_margin > 31)
-		i2c_data[1] = (wdt_margin & 0xFC) | 0x83; /* resolution = 4s */
-	else
+	if (wdt_margin > 31) {
+		printk("rtc-m41t80: watchdog timeout is %d, using 4 second resolution\n", wdt_margin);
+		i2c_data[1] = (wdt_margin & 0xFC) | 0x03; /* resolution = 4s */
+	}
+	else {
 		/*
 		 * WDS = 1 (0x80), mulitplier = WD_TIMO, resolution = 1s (0x02)
 		 */
-		i2c_data[1] = wdt_margin<<2 | 0x82;
+		printk("rtc-m41t80: watchdog timeout is %d, using 1 second resolution\n", wdt_margin);
+		i2c_data[1] = wdt_margin<<2 | 0x02;
+	}
 
 	/*
 	 * M41T65 has three bits for watchdog resolution.  Don't set bit 7, as
@@ -786,6 +791,7 @@ static int m41t80_probe(struct i2c_client *client,
 	clientdata->features = id->driver_data;
 	i2c_set_clientdata(client, clientdata);
 
+	device_init_wakeup(&client->dev, 1);
 	rtc = rtc_device_register(client->name, &client->dev,
 				  &m41t80_rtc_ops, THIS_MODULE);
 	if (IS_ERR(rtc)) {
@@ -796,8 +802,13 @@ static int m41t80_probe(struct i2c_client *client,
 
 	clientdata->rtc = rtc;
 
+	/* Make sure interrupt pins are de-asserted by reading FLAGS register */
+	rc = i2c_smbus_read_byte_data(client, M41T80_REG_FLAGS);
+	if (rc < 0)
+		goto ht_err;
+
 	/* Make sure HT (Halt Update) bit is cleared */
-	rc = i2c_smbus_read_byte_data(client, M41T80_REG_ALARM_HOUR);
+	rc = i2c_smbus_read_byte_data(client, 0x0c);
 	if (rc < 0)
 		goto ht_err;
 
@@ -813,7 +824,7 @@ static int m41t80_probe(struct i2c_client *client,
 				 tm.tm_min, tm.tm_sec);
 		}
 		if (i2c_smbus_write_byte_data(client,
-					      M41T80_REG_ALARM_HOUR,
+					      0x0c,
 					      rc & ~M41T80_ALHOUR_HT) < 0)
 			goto ht_err;
 	}
@@ -829,9 +840,11 @@ static int m41t80_probe(struct i2c_client *client,
 			goto st_err;
 	}
 
-	rc = m41t80_sysfs_register(&client->dev);
-	if (rc)
-		goto exit;
+	m41t80_sysfs_register(&client->dev);
+
+	/* enable second alarm */	
+	if ((rc = i2c_smbus_read_byte_data(client, M41T80_REG_SQW)) >= 0)
+		i2c_smbus_write_byte_data(client, M41T80_REG_SQW, rc | 0x02);
 
 #ifdef CONFIG_RTC_DRV_M41T80_WDT
 	if (clientdata->features & M41T80_FEATURE_HT) {
