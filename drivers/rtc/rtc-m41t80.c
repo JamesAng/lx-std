@@ -38,7 +38,7 @@
 #define M41T80_REG_DAY	5
 #define M41T80_REG_MON	6
 #define M41T80_REG_YEAR	7
-/* HACK to use alarm2 instead of alarm1 */
+/* use alarm2 instead of alarm1 */
 #define M41T80_REG_ALARM_MON	0x14
 #define M41T80_REG_ALARM_DAY	0x15
 #define M41T80_REG_ALARM_HOUR	0x16
@@ -216,6 +216,7 @@ static int m41t80_rtc_set_time(struct device *dev, struct rtc_time *tm)
 
 static int m41t80_rtc_alarm_irq_enable(struct device *dev, unsigned int enabled)
 {
+	printk("mt41t80: enable alarm irq = %d\n", enabled);
 	struct i2c_client *client = to_i2c_client(dev);
 	int rc;
 
@@ -238,6 +239,7 @@ err:
 
 static int m41t80_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *t)
 {
+	printk("mt41t80: set alarm\n");
 	struct i2c_client *client = to_i2c_client(dev);
 	u8 wbuf[1 + M41T80_ALARM_REG_SIZE];
 	u8 *buf = &wbuf[1];
@@ -308,6 +310,7 @@ static int m41t80_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *t)
 
 static int m41t80_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *t)
 {
+	printk("mt41t80: read alarm\n");
 	struct i2c_client *client = to_i2c_client(dev);
 	u8 buf[M41T80_ALARM_REG_SIZE]; /* all alarm regs */
 	u8 dt_addr[1] = { M41T80_REG_ALARM_MON };
@@ -802,11 +805,6 @@ static int m41t80_probe(struct i2c_client *client,
 
 	clientdata->rtc = rtc;
 
-	/* Make sure interrupt pins are de-asserted by reading FLAGS register */
-	rc = i2c_smbus_read_byte_data(client, M41T80_REG_FLAGS);
-	if (rc < 0)
-		goto ht_err;
-
 	/* Make sure HT (Halt Update) bit is cleared */
 	rc = i2c_smbus_read_byte_data(client, 0x0c);
 	if (rc < 0)
@@ -840,11 +838,22 @@ static int m41t80_probe(struct i2c_client *client,
 			goto st_err;
 	}
 
-	m41t80_sysfs_register(&client->dev);
+	/* Make sure interrupt pins are de-asserted by reading FLAGS register */
+	rc = i2c_smbus_read_byte_data(client, M41T80_REG_FLAGS);
+	if (rc < 0)
+		goto ht_err;
 
 	/* enable second alarm */	
 	if ((rc = i2c_smbus_read_byte_data(client, M41T80_REG_SQW)) >= 0)
 		i2c_smbus_write_byte_data(client, M41T80_REG_SQW, rc | 0x02);
+
+	/* and disable alarm interrupts */
+	if ((rc = i2c_smbus_read_byte_data(client, M41T80_REG_ALARM_MON)) >= 0)
+		i2c_smbus_write_byte_data(client, M41T80_REG_ALARM_MON, rc&= ~M41T80_ALMON_AFE);
+		
+	rc = m41t80_sysfs_register(&client->dev);
+	if (rc)
+		goto exit;
 
 #ifdef CONFIG_RTC_DRV_M41T80_WDT
 	if (clientdata->features & M41T80_FEATURE_HT) {
