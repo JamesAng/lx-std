@@ -37,7 +37,7 @@ int aptina_pll_calculate(struct device *dev,
 	unsigned int p1;
 	unsigned int div;
 
-	dev_dbg(dev, "PLL: ext clock %u pix clock %u\n",
+	dev_err(dev, "PLL: ext clock %u pix clock %u\n",
 		pll->ext_clock, pll->pix_clock);
 
 	if (pll->ext_clock < limits->ext_clock_min ||
@@ -89,7 +89,7 @@ int aptina_pll_calculate(struct device *dev,
 	printk("mf_max (min(mf_max(above), DIV_ROUND_UP(%d * %d, %d))= %d\n",
 		limits->n_max, limits->p1_max, div, mf_max);
 
-	dev_dbg(dev, "pll: mf min %u max %u\n", mf_min, mf_max);
+	dev_err(dev, "pll: mf min %u max %u\n", mf_min, mf_max);
 	if (mf_min > mf_max) {
 		dev_err(dev, "pll: no valid combined N*P1 divisor.\n");
 		return -EINVAL;
@@ -182,7 +182,7 @@ int aptina_pll_calculate(struct device *dev,
 		pll->n = div * mf_low / p1;
 		pll->m *= mf_low;
 		pll->p1 = p1;
-		dev_dbg(dev, "PLL: N %u M %u P1 %u\n", pll->n, pll->m, pll->p1);
+		dev_err(dev, "PLL: N %u M %u P1 %u\n", pll->n, pll->m, pll->p1);
 		return 0;
 	}
 

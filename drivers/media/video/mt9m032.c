@@ -61,22 +61,23 @@
 #define MT9M032_ROW_START				0x01
 #define		MT9M032_ROW_START_MIN			0
 #define		MT9M032_ROW_START_MAX			1152
-#define		MT9M032_ROW_START_DEF			60
+#define		MT9M032_ROW_START_DEF			0x113
 #define MT9M032_COLUMN_START				0x02
 #define		MT9M032_COLUMN_START_MIN		0
 #define		MT9M032_COLUMN_START_MAX		1600
-#define		MT9M032_COLUMN_START_DEF		16
+#define		MT9M032_COLUMN_START_DEF		0x1f4
 #define MT9M032_ROW_SIZE				0x03
 #define		MT9M032_ROW_SIZE_MIN			32
 #define		MT9M032_ROW_SIZE_MAX			1152
-#define		MT9M032_ROW_SIZE_DEF			1080
+#define		MT9M032_ROW_SIZE_DEF			480
 #define MT9M032_COLUMN_SIZE				0x04
 #define		MT9M032_COLUMN_SIZE_MIN			32
 #define		MT9M032_COLUMN_SIZE_MAX			1600
-#define		MT9M032_COLUMN_SIZE_DEF			1440
+#define		MT9M032_COLUMN_SIZE_DEF			640
 #define MT9M032_HBLANK					0x05
 #define MT9M032_VBLANK					0x06
 #define		MT9M032_VBLANK_MAX			0x7ff
+#define		MT9M032_VBLANK_DEF			8
 #define MT9M032_SHUTTER_WIDTH_HIGH			0x08
 #define MT9M032_SHUTTER_WIDTH_LOW			0x09
 #define		MT9M032_SHUTTER_WIDTH_MIN		1
@@ -181,6 +182,7 @@ static int mt9m032_update_timing(struct mt9m032 *sensor,
 	unsigned int min_vblank;
 	unsigned int vblank;
 	u32 row_time;
+	int ret;
 
 	if (!interval)
 		interval = &sensor->frame_interval;
@@ -205,8 +207,9 @@ static int mt9m032_update_timing(struct mt9m032 *sensor,
 	/* enforce minimal 1.6ms blanking time. */
 	min_vblank = 1600000 / row_time;
 	vblank = clamp_t(unsigned int, vblank, min_vblank, MT9M032_VBLANK_MAX);
-
-	return mt9m032_write(client, MT9M032_VBLANK, vblank);
+	ret = mt9m032_write(client, MT9M032_VBLANK, 8);
+	printk("MT9M032_VBLANK: %x\n", mt9m032_read(client, MT9M032_VBLANK));
+	return ret;
 }
 
 static int mt9m032_update_geom_timing(struct mt9m032 *sensor)
@@ -216,15 +219,19 @@ static int mt9m032_update_geom_timing(struct mt9m032 *sensor)
 
 	ret = mt9m032_write(client, MT9M032_COLUMN_SIZE,
 			    sensor->crop.width - 1);
+	printk("MT9M032_COLUMN_SIZE: %x\n", mt9m032_read(client, MT9M032_COLUMN_SIZE));
 	if (!ret)
 		ret = mt9m032_write(client, MT9M032_ROW_SIZE,
 				    sensor->crop.height - 1);
+	printk("MT9M032_ROW_SIZE: %x\n", mt9m032_read(client, MT9M032_ROW_SIZE));
 	if (!ret)
 		ret = mt9m032_write(client, MT9M032_COLUMN_START,
 				    sensor->crop.left);
+	printk("MT9M032_COLUMN_START: %x\n", mt9m032_read(client, MT9M032_COLUMN_START));
 	if (!ret)
 		ret = mt9m032_write(client, MT9M032_ROW_START,
 				    sensor->crop.top);
+	printk("MT9M032_ROW_START: %x\n", mt9m032_read(client, MT9M032_ROW_START));
 	if (!ret)
 		ret = mt9m032_update_timing(sensor, NULL);
 	return ret;
@@ -233,14 +240,17 @@ static int mt9m032_update_geom_timing(struct mt9m032 *sensor)
 static int update_formatter2(struct mt9m032 *sensor, bool streaming)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&sensor->subdev);
+	int ret;
 	u16 reg_val =   MT9M032_FORMATTER2_DOUT_EN
 		      | 0x0070;  /* parts reserved! */
 				 /* possibly for changing to 14-bit mode */
 
-	if (streaming)
+//	if (streaming)
 		reg_val |= MT9M032_FORMATTER2_PIXCLK_EN;   /* pixclock enable */
 
-	return mt9m032_write(client, MT9M032_FORMATTER2, reg_val);
+	ret = mt9m032_write(client, MT9M032_FORMATTER2, reg_val);
+	printk("MT9M032_FORMATTER2: %x\n", mt9m032_read(client, MT9M032_FORMATTER2));
+	return ret;
 }
 
 static int mt9m032_setup_pll(struct mt9m032 *sensor)
@@ -250,44 +260,70 @@ static int mt9m032_setup_pll(struct mt9m032 *sensor)
 		.ext_clock_max = 16500000,
 		.int_clock_min = 2000000,
 		.int_clock_max = 24000000,
-		.out_clock_min = 322000000,
+		.out_clock_min = 320000000,
 		.out_clock_max = 693000000,
 		.pix_clock_max = 99000000,
 		.n_min = 1,
 		.n_max = 64,
 		.m_min = 16,
 		.m_max = 255,
-		.p1_min = 1,
-		.p1_max = 128,
+		.p1_min = 6,
+		.p1_max = 7,
 	};
 
 	struct i2c_client *client = v4l2_get_subdevdata(&sensor->subdev);
 	struct mt9m032_platform_data *pdata = sensor->pdata;
 	struct aptina_pll pll;
 	int ret;
+	u16 val;
+
+	mt9m032_write(client, MT9P031_PLL_CONTROL, MT9P031_PLL_CONTROL_PWRON);
+	printk("MT9P031_RESERVED_R10: %x\n", mt9m032_read(client, MT9P031_PLL_CONTROL));
+	mt9m032_write(client, MT9P031_PLL_CONTROL, MT9P031_PLL_CONTROL_PWROFF);
+	printk("MT9P031_RESERVED_R10: %x\n", mt9m032_read(client, MT9P031_PLL_CONTROL));
+	usleep_range(10000, 11000);
+	mt9m032_write(client, MT9P031_PLL_CONTROL, MT9P031_PLL_CONTROL_PWRON);
+	printk("MT9P031_RESERVED_R10: %x\n", mt9m032_read(client, MT9P031_PLL_CONTROL));
+	usleep_range(10000, 11000);
 
 	pll.ext_clock = pdata->ext_clock;
 	pll.pix_clock = pdata->pix_clock;
 
-	ret = aptina_pll_calculate(&client->dev, &limits, &pll);
-	if (ret < 0)
-		return ret;
+//	ret = aptina_pll_calculate(&client->dev, &limits, &pll);
+//	if (ret < 0) {
+//		printk("MT9P031 ppl calculation failed!\n");	
+//		return ret;
+//	}
 
 	sensor->pix_clock = pdata->pix_clock;
 
-	ret = mt9m032_write(client, MT9M032_PLL_CONFIG1,
-			    (pll.m << MT9M032_PLL_CONFIG1_MUL_SHIFT)
-			    | (pll.p1 - 1));
-	if (!ret)
-		ret = mt9m032_write(client, MT9P031_PLL_CONFIG2, pll.n - 1);
+//	ret = mt9m032_write(client, MT9M032_PLL_CONFIG1,
+//			    (pll.m << MT9M032_PLL_CONFIG1_MUL_SHIFT)
+//			    | (pll.n - 1));
+//	printk("MT9M032_PLL_CONFIG1: %x\n", mt9m032_read(client, MT9M032_PLL_CONFIG1));
+
+	ret = mt9m032_write(client, MT9M032_PLL_CONFIG1, 0x7804);
+	printk("MT9M032_PLL_CONFIG1: %x\n", mt9m032_read(client, MT9M032_PLL_CONFIG1));
+
+//	if (!ret) {
+//		val = (pll.p1 == 6) ? 0x111e : 0x101e;
+//		/* Set 14-bit mode, and proper divider */
+//		ret = mt9m032_write(client, MT9M032_FORMATTER1, val);
+//		printk("MT9M032_FORMATTER1: %x\n", mt9m032_read(client, MT9M032_FORMATTER1));
+//	}
+
+	ret = mt9m032_write(client, MT9M032_FORMATTER1, 0x111e);
+	printk("MT9M032_FORMATTER1: %x\n", mt9m032_read(client, MT9M032_FORMATTER1));
+
+	usleep_range(10000, 11000);
 	if (!ret)
 		ret = mt9m032_write(client, MT9P031_PLL_CONTROL,
 				    MT9P031_PLL_CONTROL_PWRON |
 				    MT9P031_PLL_CONTROL_USEPLL);
+	printk("MT9P031_RESERVED_R10: %x\n", mt9m032_read(client, MT9P031_PLL_CONTROL));
 	if (!ret)		/* more reserved, Continuous, Master Mode */
-		ret = mt9m032_write(client, MT9M032_READ_MODE1, 0x8006);
-	if (!ret)		/* Set 14-bit mode, select 7 divider */
-		ret = mt9m032_write(client, MT9M032_FORMATTER1, 0x111e);
+		ret = mt9m032_write(client, MT9M032_READ_MODE1, 0x8186);
+	printk("MT9M032_READ_MODE1: %x\n", mt9m032_read(client, MT9M032_READ_MODE1));
 
 	return ret;
 }
@@ -572,12 +608,16 @@ static int mt9m032_s_register(struct v4l2_subdev *sd,
 static int update_read_mode2(struct mt9m032 *sensor, bool vflip, bool hflip)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&sensor->subdev);
+	int ret;
+
 	int reg_val = (vflip << MT9M032_READ_MODE2_VFLIP_SHIFT)
 		    | (hflip << MT9M032_READ_MODE2_HFLIP_SHIFT)
 		    | MT9M032_READ_MODE2_ROW_BLC
 		    | 0x0007;
 
-	return mt9m032_write(client, MT9M032_READ_MODE2, reg_val);
+	ret = mt9m032_write(client, MT9M032_READ_MODE2, reg_val);
+	printk("MT9M032_READ_MODE2: %x\n", mt9m032_read(client, MT9M032_READ_MODE2));
+	return ret;
 }
 
 static int mt9m032_set_gain(struct mt9m032 *sensor, s32 val)
@@ -587,6 +627,7 @@ static int mt9m032_set_gain(struct mt9m032 *sensor, s32 val)
 	int analog_mul;		/* 0 or 1 */
 	int analog_gain_val;	/* in 1/16th. (0..63) */
 	u16 reg_val;
+	int ret;
 
 	digital_gain_val = 51; /* from setup example */
 
@@ -606,7 +647,9 @@ static int mt9m032_set_gain(struct mt9m032 *sensor, s32 val)
 		| ((analog_mul & 1) << MT9M032_GAIN_AMUL_SHIFT)
 		| (analog_gain_val & MT9M032_GAIN_ANALOG_MASK);
 
-	return mt9m032_write(client, MT9M032_GAIN_ALL, reg_val);
+	ret = mt9m032_write(client, MT9M032_GAIN_ALL, reg_val);
+	printk("MT9M032_GAIN_ALL: %x\n", mt9m032_read(client, MT9M032_GAIN_ALL));
+	return ret;
 }
 
 static int mt9m032_try_ctrl(struct v4l2_ctrl *ctrl)
@@ -636,13 +679,16 @@ static int mt9m032_set_ctrl(struct v4l2_ctrl *ctrl)
 					 sensor->hflip->val);
 
 	case V4L2_CID_EXPOSURE:
-		ret = mt9m032_write(client, MT9M032_SHUTTER_WIDTH_HIGH,
-				    (ctrl->val >> 16) & 0xffff);
+		ret = mt9m032_write(client, MT9M032_SHUTTER_WIDTH_HIGH, 0);
+//				    (ctrl->val >> 16) & 0xffff);
+		printk("MT9M032_SHUTTER_WIDTH_HIGH: %x\n", mt9m032_read(client, MT9M032_SHUTTER_WIDTH_HIGH));
 		if (ret < 0)
 			return ret;
 
-		return mt9m032_write(client, MT9M032_SHUTTER_WIDTH_LOW,
-				     ctrl->val & 0xffff);
+		ret = mt9m032_write(client, MT9M032_SHUTTER_WIDTH_LOW, 6);
+//				     ctrl->val & 0xffff);
+		printk("MT9M032_SHUTTER_WIDTH_LOW: %x\n", mt9m032_read(client, MT9M032_SHUTTER_WIDTH_LOW));
+		return ret;
 	}
 
 	return 0;
@@ -743,14 +789,14 @@ static int mt9m032_probe(struct i2c_client *client,
 	v4l2_ctrl_handler_init(&sensor->ctrls, 4);
 
 	v4l2_ctrl_new_std(&sensor->ctrls, &mt9m032_ctrl_ops,
-			  V4L2_CID_GAIN, 0, 127, 1, 64);
+			  V4L2_CID_GAIN, 0, 127, 1, 16);
 
 	sensor->hflip = v4l2_ctrl_new_std(&sensor->ctrls,
 					  &mt9m032_ctrl_ops,
-					  V4L2_CID_HFLIP, 0, 1, 1, 0);
+					  V4L2_CID_HFLIP, 0, 1, 1, 1);
 	sensor->vflip = v4l2_ctrl_new_std(&sensor->ctrls,
 					  &mt9m032_ctrl_ops,
-					  V4L2_CID_VFLIP, 0, 1, 1, 0);
+					  V4L2_CID_VFLIP, 0, 1, 1, 1);
 
 	v4l2_ctrl_new_std(&sensor->ctrls, &mt9m032_ctrl_ops,
 			  V4L2_CID_EXPOSURE, MT9M032_SHUTTER_WIDTH_MIN,
@@ -772,9 +818,11 @@ static int mt9m032_probe(struct i2c_client *client,
 		goto error_ctrl;
 
 	ret = mt9m032_write(client, MT9M032_RESET, 1);	/* reset on */
+	printk("MT9M032_RESET: %x\n", mt9m032_read(client, MT9M032_RESET));
 	if (ret < 0)
 		goto error_entity;
-	mt9m032_write(client, MT9M032_RESET, 0);	/* reset off */
+	ret = mt9m032_write(client, MT9M032_RESET, 0);	/* reset off */
+	printk("MT9M032_RESET: %x\n", mt9m032_read(client, MT9M032_RESET));
 	if (ret < 0)
 		goto error_entity;
 
@@ -793,29 +841,36 @@ static int mt9m032_probe(struct i2c_client *client,
 		goto error_entity;
 
 	ret = mt9m032_write(client, 0x41, 0x0000);	/* reserved !!! */
+	printk("MT9M032_RESERVED_R41: %x\n", mt9m032_read(client, 0x41));
 	if (ret < 0)
 		goto error_entity;
 	ret = mt9m032_write(client, 0x42, 0x0003);	/* reserved !!! */
+	printk("MT9M032_RESERVED_R42: %x\n", mt9m032_read(client, 0x42));
 	if (ret < 0)
 		goto error_entity;
 	ret = mt9m032_write(client, 0x43, 0x0003);	/* reserved !!! */
+	printk("MT9M032_RESERVED_R43: %x\n", mt9m032_read(client, 0x43));
 	if (ret < 0)
 		goto error_entity;
 	ret = mt9m032_write(client, 0x7f, 0x0000);	/* reserved !!! */
+	printk("MT9M032_RESERVED_R7f: %x\n", mt9m032_read(client, 0x7f));
 	if (ret < 0)
 		goto error_entity;
 	if (sensor->pdata->invert_pixclock) {
 		ret = mt9m032_write(client, MT9M032_PIX_CLK_CTRL,
 				    MT9M032_PIX_CLK_CTRL_INV_PIXCLK);
+		printk("MT9M032_PIX_CLK_CTRL: %x\n", mt9m032_read(client, MT9M032_PIX_CLK_CTRL));
 		if (ret < 0)
 			goto error_entity;
 	}
 
 	ret = mt9m032_write(client, MT9M032_RESTART, 1); /* Restart on */
+	printk("MT9M032_RESTART: %x\n", mt9m032_read(client, MT9M032_RESET));
 	if (ret < 0)
 		goto error_entity;
 	msleep(100);
 	ret = mt9m032_write(client, MT9M032_RESTART, 0); /* Restart off */
+	printk("MT9M032_RESTART: %x\n", mt9m032_read(client, MT9M032_RESET));
 	if (ret < 0)
 		goto error_entity;
 	msleep(100);
