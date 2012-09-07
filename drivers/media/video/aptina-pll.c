@@ -53,8 +53,11 @@ int aptina_pll_calculate(struct device *dev,
 
 	/* Compute the multiplier M and combined N*P1 divisor. */
 	div = gcd(pll->pix_clock, pll->ext_clock);
+	printk("div = %d\n", div);
 	pll->m = pll->pix_clock / div;
+	printk("pll->m = %d\n", pll->m);
 	div = pll->ext_clock / div;
+	printk("div = %d\n", div);
 
 	/* We now have the smallest M and N*P1 values that will result in the
 	 * desired pixel clock frequency, but they might be out of the valid
@@ -67,13 +70,24 @@ int aptina_pll_calculate(struct device *dev,
 	 * - minimum/maximum combined N*P1 divisor
 	 */
 	mf_min = DIV_ROUND_UP(limits->m_min, pll->m);
+	printk("mf_min (DIV_ROUND_UP(%d, %d)) = %d\n", limits->m_min, pll->m, mf_min);
 	mf_min = max(mf_min, limits->out_clock_min /
 		     (pll->ext_clock / limits->n_min * pll->m));
+	printk("mf_min (max(mf_min(above), %d / (%d / %d * %d))= %d\n",
+		limits->out_clock_min, pll->ext_clock, limits->n_min, pll->m, mf_min);
 	mf_min = max(mf_min, limits->n_min * limits->p1_min / div);
+	printk("mf_min (max(mf_min(above), %d * %d / %d))= %d\n",
+		limits->n_min, limits->p1_min, div, mf_min);
 	mf_max = limits->m_max / pll->m;
+	printk("mf_max (%d / %d) = %d\n",
+		limits->m_max, pll->m, mf_max);
 	mf_max = min(mf_max, limits->out_clock_max /
 		    (pll->ext_clock / limits->n_max * pll->m));
+	printk("mf_max (min(mf_max(above), %d / (%d / %d * %d))= %d\n",
+		limits->out_clock_max, pll->ext_clock, limits->n_max, pll->m, mf_max);
 	mf_max = min(mf_max, DIV_ROUND_UP(limits->n_max * limits->p1_max, div));
+	printk("mf_max (min(mf_max(above), DIV_ROUND_UP(%d * %d, %d))= %d\n",
+		limits->n_max, limits->p1_max, div, mf_max);
 
 	dev_dbg(dev, "pll: mf min %u max %u\n", mf_min, mf_max);
 	if (mf_min > mf_max) {
@@ -140,8 +154,13 @@ int aptina_pll_calculate(struct device *dev,
 
 	p1_min = max(limits->p1_min, DIV_ROUND_UP(limits->out_clock_min * div,
 		     pll->ext_clock * pll->m));
+	printk("p1_min (max(%d, %d)) = %d\n",
+		limits->p1_min, DIV_ROUND_UP(limits->out_clock_min * div, pll->ext_clock * pll->m), p1_min);
+
 	p1_max = min(limits->p1_max, limits->out_clock_max * div /
 		     (pll->ext_clock * pll->m));
+	printk("p1_max (min(%d, %d)) = %d\n",
+		limits->p1_max, limits->out_clock_max * div / (pll->ext_clock * pll->m), p1_max);
 
 	for (p1 = p1_max & ~1; p1 >= p1_min; p1 -= 2) {
 		unsigned int mf_inc = p1 / gcd(div, p1);
@@ -150,8 +169,12 @@ int aptina_pll_calculate(struct device *dev,
 
 		mf_low = roundup(max(mf_min, DIV_ROUND_UP(pll->ext_clock * p1,
 					limits->int_clock_max * div)), mf_inc);
+		printk("mf_low (roundup(max(%d, DIV_ROUND_UP(%d, %d)), %d) = %d\n",
+			mf_min, pll->ext_clock * p1, limits->int_clock_max * div, mf_inc, mf_low);
 		mf_high = min(mf_max, pll->ext_clock * p1 /
 			      (limits->int_clock_min * div));
+		printk("mf_high (min(%d, %d))= %d\n",
+			mf_max, pll->ext_clock * p1 / (limits->int_clock_min * div), mf_high);
 
 		if (mf_low > mf_high)
 			continue;
