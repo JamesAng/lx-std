@@ -192,10 +192,10 @@ config GPIO_VX855
 	  functionality of the device.
 
 config GPIO_WHOIFPGA
-	tristate "WHOIFPGA GPIO support"
-	depends on GPIOLIB
+	tristate "WHOIFPGA support"
+	depends on GPIOLIB && WATCHDOG_CORE
 	help
-	  Say yes here to support GPIO functionality of the WHOI FPGA.
+	  Say yes here to support functionality of the WHOI FPGA including watchdog and GPIO.
 
 
 comment "I2C GPIO expanders:"
