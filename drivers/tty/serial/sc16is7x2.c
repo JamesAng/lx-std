@@ -49,6 +49,14 @@
 #define IOC_GPIO74	0x02	/* GPIO 7:4 unset: as IO, set: as modem pins */
 #define IOC_IOLATCH	0x01	/* Unset: input unlatched, set: input latched */
 
+/* Bit Settings for Modem Control Register */
+#ifdef UART_MCR_TCRTLR
+#undef UART_MCR_TCRTLR
+#define UART_MCR_TCRTLR			0x04	/* Enable / Disable TCR and TLR Register */
+#endif
+#define UART_MCR_IRDA_MODE		0x40	/* Enable / Disable IrDA Mode */
+
+
 struct sc16is7x2_chip;
 
 /*
@@ -299,6 +307,7 @@ static void sc16is7x2_handle_regs(struct sc16is7x2_chip *ts, unsigned ch)
 static void sc16is7x2_read_status(struct sc16is7x2_chip *ts, unsigned ch)
 {
 	struct sc16is7x2_channel *chan = &(ts->channel[ch]);
+	struct uart_port *uart = &chan->uart;
 /*	struct spi_message m;
 	struct spi_transfer t;
 	u8 *buf = chan->buf; */
@@ -330,6 +339,21 @@ static void sc16is7x2_read_status(struct sc16is7x2_chip *ts, unsigned ch)
 	dev_dbg(&ts->spi->dev, " %s ier=0x%02x iir=0x%02x msr=0x%02x lsr=0x%02x\n",
 			__func__, buf[17], buf[18], buf[19], buf[20]);
 */
+
+	/* Handle Change in DCD */
+	if (chan->msr & UART_MSR_DDCD)
+			uart_handle_dcd_change(uart, chan->msr & UART_MSR_DCD);
+	/* Handle Change in CTS */
+	if (chan->msr & UART_MSR_DCTS)
+			uart_handle_cts_change(uart, chan->msr & UART_MSR_CTS);
+
+	/* Handle Change in RI */
+	if (chan->msr & UART_MSR_TERI)
+			uart->icount.rng++;
+
+	/* Handle Change in DSR */
+	if (chan->msr & UART_MSR_DDSR)	
+			uart->icount.dsr++;
 }
 
 static void sc16is7x2_handle_channel(struct work_struct *w)
@@ -433,10 +457,18 @@ static void sc16is7x2_set_mctrl(struct uart_port *port, unsigned int mctrl)
 	 */
 	if (mctrl & TIOCM_DTR)
 		 chan->mcr |= UART_MCR_DTR;
+	else
+		 chan->mcr &= ~UART_MCR_DTR;
+
 	if (mctrl & TIOCM_RTS)
 		 chan->mcr |= UART_MCR_RTS;
+	else
+		 chan->mcr &= ~UART_MCR_RTS;
+
 	if (mctrl & TIOCM_LOOP)
 		 chan->mcr |= UART_MCR_LOOP;
+	else
+		 chan->mcr &= ~UART_MCR_LOOP;
 
 	chan->handle_regs = true;
 	/* Trigger work thread for doing the actual configuration change */
@@ -609,10 +641,18 @@ sc16is7x2_set_termios(struct uart_port *port, struct ktermios *termios,
 
 	if (termios->c_cflag & CSTOPB)
 		lcr |= UART_LCR_STOP;
+	else
+		lcr &= ~UART_LCR_STOP;
+
 	if (termios->c_cflag & PARENB)
 		lcr |= UART_LCR_PARITY;
+	else
+		lcr &= ~UART_LCR_PARITY;
+
 	if (!(termios->c_cflag & PARODD))
 		lcr |= UART_LCR_EPAR;
+	else
+		lcr &= ~UART_LCR_EPAR;
 #ifdef CMSPAR
 	if (termios->c_cflag & CMSPAR)
 		lcr |= UART_LCR_SPAR;
@@ -627,6 +667,7 @@ sc16is7x2_set_termios(struct uart_port *port, struct ktermios *termios,
 
 	chan->efr = UART_EFR_ECB;
 	chan->mcr |= UART_MCR_RTS;
+
 	if (termios->c_cflag & CRTSCTS)
 		chan->efr |= UART_EFR_CTS | UART_EFR_RTS;
 
@@ -889,6 +930,7 @@ static struct uart_driver sc16is7x2_uart_driver;
 static int sc16is7x2_register_gpio(struct sc16is7x2_chip *ts,
 		struct sc16is7x2_platform_data *pdata)
 {
+
 #ifdef CONFIG_GPIOLIB
 	ts->gpio.label = (pdata->label) ? pdata->label : DRIVER_NAME;
 	ts->gpio.request	= sc16is7x2_gpio_request;
@@ -920,6 +962,9 @@ static int sc16is7x2_register_gpio(struct sc16is7x2_chip *ts,
 
 	return gpiochip_add(&ts->gpio);
 #else
+	//Disable GPIOs 
+	u8 io_control = IOC_GPIO30 | IOC_GPIO74;
+	sc16is7x2_write(ts, REG_IOC, 0, io_control);
 	return 0;
 #endif
 }
