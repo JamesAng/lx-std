@@ -202,7 +202,7 @@ static void __init overo_init_smsc911x(void)
 static inline void __init overo_init_smsc911x(void) { return; }
 #endif
 
-#if defined(CONFIG_OMAP2_DSS) || defined(CONFIG_OMAP2_DSS_MODULE)
+#if defined(CONFIG_FB_OMAP2) || defined(CONFIG_FB_OMAP2_MODULE)
 /* DSS */
 static int lcd_enabled;
 static int dvi_enabled;
@@ -548,7 +548,7 @@ static int __init overo_i2c_init(void)
 	pdata_flags |= TWL_COMMON_PDATA_MADC;
 #endif
 
-#if defined(CONFIG_OMAP2_DSS) || defined(CONFIG_OMAP2_DSS_MODULE)
+#if defined(CONFIG_FB_OMAP2) || defined(CONFIG_FB_OMAP2_MODULE)
 	regulators_flags |= TWL_COMMON_REGULATOR_VDAC;
 #endif
 
